@@ -122,9 +122,26 @@ async def node_minister_analysis(payload: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("Minister analyzing", role=role)
     result = await minister.analyze(problem, context)
     result["_timestamp"] = _ts()
+    
+    # Also record this as a 'presentation' phase debate argument for the history
+    presentation = {
+        "agent_role": role,
+        "round_number": 0,
+        "phase": "presentation",
+        "argument": f"Situation Assessment: {result.get('situation_assessment', '')}\n\nKey Findings: {', '.join(result.get('key_findings', []))}\n\nProposed Solutions: {', '.join(result.get('proposed_solutions', []))}",
+        "attacking_roles": [],
+        "defending_positions": [],
+        "concessions": [],
+        "new_evidence": [],
+        "word_count": len(result.get("situation_assessment", "").split()),
+        "_timestamp": result["_timestamp"]
+    }
 
     logger.info("Minister analysis done", role=role, confidence=result.get("confidence"))
-    return {"analyses": [result]}            # Annotated reducer appends to list
+    return {
+        "analyses": [result],
+        "debate_arguments": [presentation]
+    }
 
 
 # ══════════════════════════════════════════════════════════════

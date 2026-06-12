@@ -75,6 +75,7 @@ class DebateSchema(BaseModel):
     project_id: UUID
     agent_id: UUID
     round_number: int
+    phase: str
     argument: str
     supporting_agents: List[str]
     opposing_agents: List[str]

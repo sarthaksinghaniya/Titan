@@ -1,6 +1,6 @@
 """Projects API router — all project-related endpoints."""
 import json
-from typing import AsyncGenerator
+from typing import AsyncGenerator, List
 from uuid import UUID
 
 import structlog
@@ -156,3 +156,23 @@ async def stream_project(project_id: str) -> StreamingResponse:
             "Connection": "keep-alive",
         },
     )
+
+
+# ─── Get Debate History ───────────────────────────────────────
+@router.get("/sessions/{project_id}/debate-history", response_model=List[DebateSchema], tags=["projects"])
+async def get_debate_history(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> List[DebateSchema]:
+    """
+    Get the chronological debate history for replayability.
+    Ordered by created_at.
+    """
+    from sqlalchemy import select
+    from app.models.session import Debate
+    
+    stmt = select(Debate).where(Debate.project_id == UUID(project_id)).order_by(Debate.created_at.asc())
+    result = await db.execute(stmt)
+    debates = list(result.scalars().all())
+    
+    return [DebateSchema.model_validate(d) for d in debates]

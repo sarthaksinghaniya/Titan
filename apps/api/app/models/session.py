@@ -173,6 +173,7 @@ class Debate(Base):
     agent_id           = Column(UUID(as_uuid=True), ForeignKey("agents.id", ondelete="CASCADE"),
                                 nullable=False, index=True)
     round_number       = Column(Integer, nullable=False)                        # 1-based
+    phase              = Column(String(50), nullable=False, default="debate")   # presentation | critique | defense
     argument           = Column(Text, nullable=False)
     supporting_agents  = Column(JSONB, nullable=False, default=list)           # List[str] — agent roles
     opposing_agents    = Column(JSONB, nullable=False, default=list)           # List[str] — agent roles
