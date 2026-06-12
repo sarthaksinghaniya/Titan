@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  # ─── PostgreSQL Database ────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: titan-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: titan
+      POSTGRES_PASSWORD: titanpass
+      POSTGRES_DB: titan_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U titan -d titan_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── FastAPI Backend ────────────────────────────────────────
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: ../../docker/Dockerfile.api
+    container_name: titan-api
+    restart: unless-stopped
+    env_file:
+      - ../apps/api/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://titan:titanpass@postgres:5432/titan_db
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../apps/api:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── Next.js Frontend ───────────────────────────────────────
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: ../../docker/Dockerfile.web
+    container_name: titan-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+    name: titan-postgres-data

@@ -1,0 +1,309 @@
+@import "tailwindcss";
+
+/* ─── Google Fonts ─────────────────────────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+/* ─── Design Tokens ────────────────────────────────────────── */
+@theme {
+  /* Colors */
+  --color-titan-bg: #050508;
+  --color-titan-surface: #0d0d14;
+  --color-titan-surface-2: #13131f;
+  --color-titan-surface-3: #1a1a2e;
+  --color-titan-border: rgba(255, 255, 255, 0.06);
+  --color-titan-border-accent: rgba(255, 255, 255, 0.12);
+
+  /* Brand */
+  --color-titan-gold: #f59e0b;
+  --color-titan-gold-light: #fbbf24;
+  --color-titan-blue: #6366f1;
+  --color-titan-blue-light: #818cf8;
+  --color-titan-glow: rgba(99, 102, 241, 0.15);
+
+  /* Text */
+  --color-titan-text-primary: rgba(255, 255, 255, 0.95);
+  --color-titan-text-secondary: rgba(255, 255, 255, 0.6);
+  --color-titan-text-muted: rgba(255, 255, 255, 0.35);
+
+  /* Minister Colors */
+  --color-minister-pm: #f59e0b;
+  --color-minister-economic: #10b981;
+  --color-minister-tech: #6366f1;
+  --color-minister-infra: #f97316;
+  --color-minister-citizen: #ec4899;
+  --color-minister-env: #22c55e;
+  --color-minister-opp: #ef4444;
+  --color-minister-sim: #0ea5e9;
+
+  /* Status Colors */
+  --color-status-pending: #6b7280;
+  --color-status-analyzing: #6366f1;
+  --color-status-debating: #f59e0b;
+  --color-status-voting: #ec4899;
+  --color-status-simulating: #0ea5e9;
+  --color-status-synthesizing: #f97316;
+  --color-status-completed: #10b981;
+  --color-status-failed: #ef4444;
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Spacing & Layout */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Animations */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+}
+
+/* ─── Base Styles ───────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-titan-bg);
+  color: var(--color-titan-text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ─── Selection ─────────────────────────────────────────────── */
+::selection {
+  background: rgba(99, 102, 241, 0.4);
+  color: white;
+}
+
+/* ─── Focus ─────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-titan-blue);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Utility Classes ───────────────────────────────────────── */
+.titan-surface {
+  background: var(--color-titan-surface);
+  border: 1px solid var(--color-titan-border);
+}
+
+.titan-surface-2 {
+  background: var(--color-titan-surface-2);
+  border: 1px solid var(--color-titan-border);
+}
+
+.titan-card {
+  background: var(--color-titan-surface);
+  border: 1px solid var(--color-titan-border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--duration-normal) ease, box-shadow var(--duration-normal) ease;
+}
+
+.titan-card:hover {
+  border-color: var(--color-titan-border-accent);
+  box-shadow: 0 0 0 1px var(--color-titan-glow), 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.titan-glow {
+  box-shadow: 0 0 40px rgba(99, 102, 241, 0.15), 0 0 80px rgba(99, 102, 241, 0.05);
+}
+
+.titan-gold-glow {
+  box-shadow: 0 0 40px rgba(245, 158, 11, 0.2), 0 0 80px rgba(245, 158, 11, 0.05);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #f59e0b, #6366f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-blue {
+  background: linear-gradient(135deg, #818cf8, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Animations ─────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 20px currentColor;
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 40px currentColor;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes typing-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-slide-up {
+  animation: slide-up var(--duration-slow) ease forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right var(--duration-slow) ease forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in var(--duration-slow) ease forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+.typing-cursor::after {
+  content: "|";
+  animation: typing-cursor 1s infinite;
+  color: var(--color-titan-blue-light);
+  font-weight: 300;
+}
+
+/* ─── Minister Badge Colors ─────────────────────────────────── */
+.badge-prime_minister { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
+.badge-economic_minister { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+.badge-technology_minister { background: rgba(99, 102, 241, 0.15); color: #818cf8; border-color: rgba(99, 102, 241, 0.3); }
+.badge-infrastructure_minister { background: rgba(249, 115, 22, 0.15); color: #fb923c; border-color: rgba(249, 115, 22, 0.3); }
+.badge-citizen_minister { background: rgba(236, 72, 153, 0.15); color: #f472b6; border-color: rgba(236, 72, 153, 0.3); }
+.badge-environment_minister { background: rgba(34, 197, 94, 0.15); color: #4ade80; border-color: rgba(34, 197, 94, 0.3); }
+.badge-opposition_minister { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+.badge-simulation_agent { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border-color: rgba(14, 165, 233, 0.3); }
+
+/* ─── Status Colors ─────────────────────────────────────────── */
+.status-pending { color: var(--color-status-pending); }
+.status-analyzing { color: var(--color-status-analyzing); }
+.status-debating { color: var(--color-status-debating); }
+.status-voting { color: var(--color-status-voting); }
+.status-simulating { color: var(--color-status-simulating); }
+.status-synthesizing { color: var(--color-status-synthesizing); }
+.status-completed { color: var(--color-status-completed); }
+.status-failed { color: var(--color-status-failed); }
+
+/* ─── Grid Backgrounds ──────────────────────────────────────── */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.bg-dot {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ─── Hero Gradient Orbs ─────────────────────────────────────── */
+.orb-1 {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.orb-2 {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
