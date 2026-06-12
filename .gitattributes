@@ -1,0 +1,26 @@
+# Git line ending normalization
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files — no diff/merge
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+
+# Lock files — no merge
+pnpm-lock.yaml merge=binary
+package-lock.json merge=binary
+poetry.lock merge=binary
+
+# Generated files — no diff
+pnpm-lock.yaml linguist-generated=true
+pnpm-lock.yaml linguist-detectable=false

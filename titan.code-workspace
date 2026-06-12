@@ -1,0 +1,66 @@
+{
+  "folders": [
+    { "name": "TITAN (root)", "path": "." },
+    { "name": "web (Next.js)", "path": "apps/web" },
+    { "name": "api (FastAPI)", "path": "apps/api" },
+    { "name": "shared-types", "path": "packages/shared-types" }
+  ],
+  "settings": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2,
+    "typescript.tsdk": "apps/web/node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter",
+      "editor.tabSize": 4
+    },
+    "python.pythonPath": "apps/api/.venv/Scripts/python",
+    "python.analysis.extraPaths": ["apps/api"],
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/__pycache__": true,
+      "**/.next": true,
+      "**/.turbo": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "bradlc.vscode-tailwindcss",
+      "ms-python.python",
+      "ms-python.black-formatter",
+      "ms-python.vscode-pylance",
+      "charliermarsh.ruff",
+      "mtxr.sqltools",
+      "mtxr.sqltools-driver-pg",
+      "ms-azuretools.vscode-docker"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Start API",
+        "type": "shell",
+        "command": "cd apps/api && .venv/Scripts/uvicorn main:app --reload --port 8000",
+        "group": "build",
+        "presentation": { "reveal": "always", "panel": "new" }
+      },
+      {
+        "label": "Start Web",
+        "type": "shell",
+        "command": "pnpm --filter web dev",
+        "group": "build",
+        "presentation": { "reveal": "always", "panel": "new" }
+      },
+      {
+        "label": "Docker Up",
+        "type": "shell",
+        "command": "docker compose -f docker/docker-compose.yml up -d",
+        "group": "build"
+      }
+    ]
+  }
+}
