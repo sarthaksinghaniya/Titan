@@ -1,5 +1,6 @@
 """
-Session Service — orchestrates session lifecycle and agent graph execution.
+Session Service — orchestrates project lifecycle and agent graph execution.
+Uses the new GovernanceState schema (project_id, not session_id).
 """
 import uuid
 from datetime import datetime, timezone
@@ -10,16 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
-from app.models.session import (
-    Session, MinisterAnalysis, DebateRound, Vote, SimulationResult, FinalPolicy,
-    SessionStatus, MinisterRole,
-)
+from app.models.session import Project, ProjectStatus
 from app.services.event_bus import EventBus
 from app.agents.graph import create_governance_graph
-from app.schemas.session import (
-    MinisterAnalysisSchema, DebateRoundSchema, VoteSchema,
-    SimulationResultSchema, FinalPolicySchema,
-)
+from app.agents.state import make_initial_state
 
 logger = structlog.get_logger(__name__)
 
@@ -29,73 +24,86 @@ class SessionService:
         self.db = db
         self.event_bus = event_bus
 
-    async def create_session(self, problem: str, context: Optional[str] = None) -> Session:
-        """Create a new session record in the database."""
-        session = Session(
+    async def create_project(self, problem: str, context: Optional[str] = None) -> Project:
+        """Create a new project record in the database."""
+        # Auto-generate a short title from the problem
+        title = problem[:80].rstrip() + ("…" if len(problem) > 80 else "")
+
+        project = Project(
             id=uuid.uuid4(),
+            title=title,
             problem=problem,
             context=context,
-            status=SessionStatus.PENDING,
+            status=ProjectStatus.PENDING,
+            metadata_={},
         )
-        self.db.add(session)
+        self.db.add(project)
         await self.db.commit()
-        await self.db.refresh(session)
-        return session
+        await self.db.refresh(project)
+        logger.info("Project created", project_id=str(project.id))
+        return project
 
-    async def run_agent_graph(self, session_id: str) -> None:
+    # Backwards-compatible alias
+    async def create_session(self, problem: str, context: Optional[str] = None):
+        return await self.create_project(problem, context)
+
+    async def run_agent_graph(self, project_id: str) -> None:
         """
-        Run the full LangGraph agent pipeline for a session.
+        Run the full LangGraph governance pipeline for a project.
         Uses a fresh DB session (background task context).
+        Publishes SSE events at each phase transition.
         """
         async with AsyncSessionLocal() as db:
             try:
-                await self._update_status(db, session_id, SessionStatus.ANALYZING)
-                await self.event_bus.publish(session_id, "session_started", {"session_id": session_id})
+                await self._update_status(db, project_id, ProjectStatus.ANALYZING)
+                await self.event_bus.publish(project_id, "session_started", {"project_id": project_id})
 
-                graph = create_governance_graph(db, self.event_bus, session_id)
-                session_result = await db.execute(select(Session).where(Session.id == uuid.UUID(session_id)))
-                session = session_result.scalar_one()
+                # Fetch problem from DB
+                result = await db.execute(select(Project).where(Project.id == uuid.UUID(project_id)))
+                project = result.scalar_one()
 
-                final_state = await graph.ainvoke({
-                    "session_id": session_id,
-                    "problem": session.problem,
-                    "context": session.context or "",
-                    "analyses": [],
-                    "debate_rounds": [],
-                    "votes": [],
-                    "simulation_results": [],
-                    "final_policy": None,
-                    "current_phase": "analyzing",
-                    "error": None,
-                })
+                # Build initial state
+                initial_state = make_initial_state(
+                    project_id=project_id,
+                    problem=project.problem,
+                    context=project.context or "",
+                )
 
-                if final_state.get("error"):
-                    await self._update_status(db, session_id, SessionStatus.FAILED, error=final_state["error"])
-                    await self.event_bus.publish(session_id, "error", {"message": final_state["error"]})
+                # Compile and run the graph
+                graph = create_governance_graph()
+                final_state = await graph.ainvoke(initial_state)
+
+                if final_state.get("error") or final_state.get("current_phase") == "failed":
+                    error_msg = final_state.get("error", "Unknown failure")
+                    await self._update_status(db, project_id, ProjectStatus.FAILED, error=error_msg)
+                    await self.event_bus.publish(project_id, "error", {"message": error_msg})
                 else:
-                    await self._update_status(db, session_id, SessionStatus.COMPLETED, completed=True)
-                    await self.event_bus.publish(session_id, "session_complete", {"session_id": session_id})
+                    await self._update_status(db, project_id, ProjectStatus.COMPLETED, completed=True)
+                    await self.event_bus.publish(project_id, "session_complete", {
+                        "project_id": project_id,
+                        "final_report": final_state.get("final_report"),
+                    })
 
             except Exception as e:
-                logger.error("Agent graph failed", session_id=session_id, error=str(e))
-                await self._update_status(db, session_id, SessionStatus.FAILED, error=str(e))
-                await self.event_bus.publish(session_id, "error", {"message": str(e)})
+                logger.error("Agent graph failed", project_id=project_id, error=str(e))
+                await self._update_status(db, project_id, ProjectStatus.FAILED, error=str(e))
+                await self.event_bus.publish(project_id, "error", {"message": str(e)})
             finally:
-                await self.event_bus.close_session(session_id)
+                await self.event_bus.close_session(project_id)
 
     async def _update_status(
         self,
         db: AsyncSession,
-        session_id: str,
-        status: SessionStatus,
+        project_id: str,
+        status: ProjectStatus,
         error: Optional[str] = None,
         completed: bool = False,
     ) -> None:
-        result = await db.execute(select(Session).where(Session.id == uuid.UUID(session_id)))
-        session = result.scalar_one()
-        session.status = status
+        result = await db.execute(select(Project).where(Project.id == uuid.UUID(project_id)))
+        project = result.scalar_one()
+        project.status = status
         if error:
-            session.error_message = error
+            project.error_message = error
         if completed:
-            session.completed_at = datetime.now(tz=timezone.utc)
+            project.completed_at = datetime.now(tz=timezone.utc)
         await db.commit()
