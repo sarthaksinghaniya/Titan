@@ -4,11 +4,13 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSessionStore } from '@/store/useSessionStore';
 import { DecisionReport } from '@/components/report/DecisionReport';
-import { FileText } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
+import { generatePDFReport } from '@/lib/generatePDF';
 
 export default function ReportPage() {
   const router = useRouter();
-  const { projectId, phase } = useSessionStore();
+  const state = useSessionStore();
+  const { projectId, phase, problemText } = state;
 
   useEffect(() => {
     if (!projectId) {
@@ -32,12 +34,21 @@ export default function ReportPage() {
         </div>
         
         {phase === 'completed' && (
-          <button 
-            onClick={() => router.push('/')}
-            className="px-4 py-2 bg-titan-surface-2 hover:bg-white/10 border border-titan-border rounded-md text-sm font-bold text-white transition-colors"
-          >
-            Start New Session
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => generatePDFReport(state, problemText)}
+              className="px-4 py-2 bg-titan-blue hover:bg-titan-blue-light border border-titan-border rounded-md text-sm font-bold text-white transition-colors flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export PDF
+            </button>
+            <button 
+              onClick={() => router.push('/')}
+              className="px-4 py-2 bg-titan-surface-2 hover:bg-white/10 border border-titan-border rounded-md text-sm font-bold text-white transition-colors"
+            >
+              Start New Session
+            </button>
+          </div>
         )}
       </div>
 

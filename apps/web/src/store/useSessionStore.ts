@@ -4,6 +4,7 @@ export type SessionPhase = 'pending' | 'analyzing' | 'debating' | 'voting' | 'si
 
 export interface StateData {
   projectId: string | null;
+  problemText: string;
   phase: SessionPhase;
   error: string | null;
   analyses: any[];
@@ -16,6 +17,7 @@ export interface StateData {
 
 interface SessionStore extends StateData {
   setProjectId: (id: string) => void;
+  setProblemText: (text: string) => void;
   setPhase: (phase: SessionPhase) => void;
   setError: (error: string) => void;
   setConnected: (status: boolean) => void;
@@ -29,6 +31,7 @@ interface SessionStore extends StateData {
 
 const initialState: StateData = {
   projectId: null,
+  problemText: '',
   phase: 'pending',
   error: null,
   analyses: [],
@@ -43,6 +46,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   ...initialState,
   
   setProjectId: (id) => set({ projectId: id, error: null }),
+  setProblemText: (text) => set({ problemText: text }),
   setPhase: (phase) => set({ phase }),
   setError: (error) => set({ error, phase: 'failed' }),
   setConnected: (status) => set({ connected: status }),

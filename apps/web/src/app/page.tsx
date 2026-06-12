@@ -9,7 +9,7 @@ import { useSessionStore } from '@/store/useSessionStore';
 
 export default function Home() {
   const router = useRouter();
-  const { setProjectId, resetSession } = useSessionStore();
+  const { setProjectId, setProblemText, resetSession } = useSessionStore();
   
   const [problem, setProblem] = useState('');
   const [context, setContext] = useState('');
@@ -33,6 +33,7 @@ export default function Home() {
         context: context.trim() || undefined,
       });
 
+      setProblemText(problem);
       setProjectId(data.project_id);
       router.push('/parliament');
     } catch (err: any) {
