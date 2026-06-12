@@ -7,6 +7,7 @@ import { useSessionStore } from '@/store/useSessionStore';
 import { AgentCards } from '@/components/parliament/AgentCards';
 import { DebateTimeline } from '@/components/parliament/DebateTimeline';
 import { VotingPanel } from '@/components/parliament/VotingPanel';
+import { WorkflowGraph } from '@/components/parliament/WorkflowGraph';
 import { Network } from 'lucide-react';
 
 export default function ParliamentPage() {
@@ -36,6 +37,7 @@ export default function ParliamentPage() {
         </p>
       </div>
 
+      <WorkflowGraph />
       <AgentCards />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
