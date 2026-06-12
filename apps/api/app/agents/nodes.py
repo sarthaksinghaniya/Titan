@@ -547,11 +547,7 @@ You must generate:
 Return ONLY this JSON (no markdown fences, no text outside the JSON):
 {pm_schema}"""
 
-    result = await PRIME_MINISTER.vote.__func__(  # re-use LLM but with custom prompt
-        PRIME_MINISTER, problem, options, analyses, debates
-    )
-
-    # Use PM's dedicated synthesis instead
+    # Use PM's dedicated synthesis
     from app.agents.ministers.base import extract_json
     from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -572,7 +568,6 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
         logger.info("Prime Minister synthesis complete", option=final.get("chosen_option"))
         return {
             "final_report": final,
-            "current_phase": "completed",
             "metadata": {**meta, "completed_at": _ts()},
         }
 
@@ -585,7 +580,78 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
 
 
 # ══════════════════════════════════════════════════════════════
-# NODE 10 — ERROR HANDLER
+# 10. BLACK SWAN RESILIENCE ENGINE
+# ══════════════════════════════════════════════════════════════
+
+async def node_black_swan_engine(state: GovernanceState) -> Dict[str, Any]:
+    """
+    Stress-tests the finalized strategy against a random catastrophic Black Swan event.
+    """
+    pid = state.get("project_id", "")
+    from app.services.session_service import SessionService
+    await SessionService.update_phase(pid, "black_swan")
+
+    report = state.get("final_report", {})
+    if not report:
+        return {}
+
+    # 1. Randomly select a crisis
+    import random
+    crises = [
+        "Global Economic Recession (-15% GDP)",
+        "Global Pandemic (Lockdowns, 30% workforce impact)",
+        "Catastrophic 500-Year Flood (Infrastructure destroyed)",
+        "Severe Supply Chain Shortage (Critical materials unavailable)",
+        "Massive Political Unrest (Riots, 40% drop in approval)"
+    ]
+    selected_crisis = random.choice(crises)
+
+    schema = """{
+  "black_swan_crisis": "<the selected crisis>",
+  "black_swan_impact": "<detailed 3-sentence analysis of how the strategy holds up or fails>",
+  "resilience_score": <1-100 float estimating strategy survivability>
+}"""
+
+    prompt = f"""You are the TITAN Black Swan Resilience Engine.
+A finalized governance strategy has been passed to you.
+
+STRATEGY CHOSEN: {report.get('chosen_option', 'Unknown')}
+RATIONALE: {report.get('rationale', '')}
+RISK MITIGATIONS: {json.dumps(report.get('risks_and_mitigations', {}))}
+
+A BLACK SWAN EVENT HAS JUST OCCURRED:
+{selected_crisis}
+
+Analyze how the strategy survives this unpredictable, massive shock. Generate a resilience score.
+Return ONLY valid JSON matching this schema:
+{schema}"""
+
+    from langchain_core.messages import HumanMessage
+    from app.agents.base import _build_llm_flash
+    llm = _build_llm_flash()
+    response = await llm.ainvoke([HumanMessage(content=prompt)])
+    content = response.content.strip()
+
+    try:
+        from app.agents.ministers.base import extract_json
+        results = extract_json(content)
+        if not results:
+            raise ValueError("Empty JSON")
+    except Exception:
+        results = {
+            "black_swan_crisis": selected_crisis,
+            "black_swan_impact": "Failed to generate structured impact analysis.",
+            "resilience_score": 0.0
+        }
+        
+    return {
+        "black_swan_results": results,
+        "current_phase": "completed"
+    }
+
+
+# ══════════════════════════════════════════════════════════════
+# NODE 11 — ERROR HANDLER
 # ══════════════════════════════════════════════════════════════
 
 async def node_error_handler(state: GovernanceState) -> Dict[str, Any]:

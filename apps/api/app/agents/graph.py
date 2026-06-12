@@ -79,6 +79,7 @@ from app.agents.nodes import (
     node_tally_votes,
     node_simulation_phase,
     node_prime_minister_synthesis,
+    node_black_swan_engine,
     node_error_handler,
     route_after_validation,
     route_to_ministers,
@@ -106,6 +107,7 @@ def build_graph() -> Any:
     g.add_node("tally_votes",              node_tally_votes)
     g.add_node("simulation_phase",         node_simulation_phase)
     g.add_node("prime_minister_synthesis", node_prime_minister_synthesis)
+    g.add_node("black_swan_engine",        node_black_swan_engine)
     g.add_node("error_handler",            node_error_handler)
 
     # ── Entry point ────────────────────────────────────────────
@@ -148,12 +150,13 @@ def build_graph() -> Any:
     # ── Simulation phase ───────────────────────────────────────
     g.add_edge("tally_votes", "simulation_phase")
 
-    # ── PM synthesis ───────────────────────────────────────────
+    # ── PM synthesis & Black Swan ──────────────────────────────
     g.add_edge("simulation_phase", "prime_minister_synthesis")
+    g.add_edge("prime_minister_synthesis", "black_swan_engine")
 
-    # ── Final edge: synthesis → END | error ───────────────────
+    # ── Final edge: black_swan_engine → END | error ────────────
     g.add_conditional_edges(
-        "prime_minister_synthesis",
+        "black_swan_engine",
         route_after_synthesis,
         {
             "__end__": END,

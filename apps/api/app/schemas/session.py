@@ -139,6 +139,9 @@ class FinalReportSchema(BaseModel):
     vote_percentage: float
     consensus_level: str
     best_simulation_score: Optional[float]
+    black_swan_crisis: Optional[str] = None
+    black_swan_impact: Optional[str] = None
+    resilience_score: Optional[float] = None
     model_used: str
     created_at: datetime
 

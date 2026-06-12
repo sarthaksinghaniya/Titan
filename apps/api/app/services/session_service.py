@@ -83,9 +83,14 @@ class SessionService:
                 else:
                     await self._persist_state(db, project_id, final_state)
                     await self._update_status(db, project_id, ProjectStatus.COMPLETED, completed=True)
+                    final_report_payload = final_state.get("final_report", {})
+                    bs_results = final_state.get("black_swan_results", {})
+                    if bs_results:
+                        final_report_payload.update(bs_results)
+
                     await self.event_bus.publish(project_id, "session_complete", {
                         "project_id": project_id,
-                        "final_report": final_state.get("final_report"),
+                        "final_report": final_report_payload,
                     })
 
             except Exception as e:
@@ -186,8 +191,10 @@ class SessionService:
             )
             db.add(sim)
 
-        # 5. Final Report
+        # 5. Final Report & Black Swan
         fr = state.get("final_report")
+        bs = state.get("black_swan_results", {})
+        
         if fr:
             report = FinalReport(
                 id=uuid.uuid4(), project_id=pid, chosen_option=fr.get("chosen_option", ""),
@@ -197,6 +204,9 @@ class SessionService:
                 risks_and_mitigations=fr.get("risks_and_mitigations", {}), expected_outcomes=fr.get("expected_outcomes", []),
                 review_timeline=fr.get("review_timeline", ""), total_votes=fr.get("vote_breakdown", {}).get("total_votes", 0),
                 winning_votes=0, vote_percentage=0.0, consensus_level=fr.get("consensus_level", "moderate"),
+                black_swan_crisis=bs.get("black_swan_crisis"),
+                black_swan_impact=bs.get("black_swan_impact"),
+                resilience_score=bs.get("resilience_score"),
                 model_used="gemini-1.5-pro"
             )
             db.add(report)

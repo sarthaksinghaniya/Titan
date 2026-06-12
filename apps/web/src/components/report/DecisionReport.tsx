@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useSessionStore } from '@/store/useSessionStore';
-import { FileText, CheckCircle, ShieldAlert, Zap, Layers } from 'lucide-react';
+import { FileText, CheckCircle, ShieldAlert, Zap, Layers, AlertCircle } from 'lucide-react';
 
 export function DecisionReport() {
   const { finalReport, phase } = useSessionStore();
@@ -137,6 +137,32 @@ export function DecisionReport() {
               ></div>
             </div>
           </motion.div>
+
+          {finalReport.black_swan_crisis && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="titan-card p-6 border-t-2 border-t-purple-500 bg-purple-900/5"
+            >
+              <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-purple-400" />
+                Black Swan Engine
+              </h3>
+              <div className="text-xs text-purple-300/80 mb-4 font-mono">{finalReport.black_swan_crisis}</div>
+
+              <div className="flex items-end gap-2 mb-4">
+                <span className="text-4xl font-black text-purple-400 leading-none">
+                  {finalReport.resilience_score?.toFixed(1) || '0.0'}
+                </span>
+                <span className="text-titan-text-muted mb-1">Resilience</span>
+              </div>
+
+              <div className="text-xs text-titan-text-secondary leading-relaxed p-3 bg-black/40 rounded border border-purple-500/20">
+                {finalReport.black_swan_impact}
+              </div>
+            </motion.div>
+          )}
 
           <motion.div 
             initial={{ opacity: 0, y: 20 }}

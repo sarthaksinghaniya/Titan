@@ -84,6 +84,13 @@ export async function generatePDFReport(state: StateData, problemText: string) {
     addText(`Confidence Score: ${Math.round(state.finalReport.confidence_score || 85)}/100`, 11, true, [16, 185, 129]); // green
     cursorY += 3;
     
+    if (state.finalReport.black_swan_crisis) {
+      addText(`BLACK SWAN CRISIS: ${state.finalReport.black_swan_crisis.toUpperCase()}`, 11, true, [168, 85, 247]); // purple
+      addText(`Resilience Score: ${Math.round(state.finalReport.resilience_score || 0)}/100`, 11, true, [168, 85, 247]);
+      addText(`Impact: ${state.finalReport.black_swan_impact}`, 10, false, [60, 60, 60]);
+      cursorY += 3;
+    }
+    
     addText('Executive Summary:', 11, true, [10, 10, 10]);
     addText(state.finalReport.executive_summary, 10, false, [40, 40, 40]);
     

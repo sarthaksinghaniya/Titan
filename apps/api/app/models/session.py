@@ -317,6 +317,11 @@ class FinalReport(Base):
     best_simulation_score   = Column(Float, nullable=True)
     model_used              = Column(String(100), nullable=False, default="gemini-1.5-pro")
 
+    # ── Black Swan Engine ─────────────────────────────────────
+    black_swan_crisis       = Column(String(200), nullable=True)
+    black_swan_impact       = Column(Text, nullable=True)
+    resilience_score        = Column(Float, nullable=True)
+
     created_at              = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # ── Relationships ─────────────────────────────────────────
