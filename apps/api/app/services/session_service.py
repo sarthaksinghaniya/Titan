@@ -160,7 +160,33 @@ class SessionService:
             )
             db.add(vote)
 
-        # 4. Final Report
+        # 4. Simulations
+        for s in state.get("simulation_results", []):
+            risk_val = s.get("risk_level", "medium").lower()
+            try:
+                risk_enum = RiskLevel(risk_val)
+            except ValueError:
+                risk_enum = RiskLevel.MEDIUM
+
+            sim = Simulation(
+                id=uuid.uuid4(), project_id=pid, option_name=s.get("option_name", ""),
+                option_description=s.get("future_name", ""), # using description field for future designation
+                economic_score=float(s.get("economic_score", 50.0)),
+                social_score=float(s.get("social_score", 50.0)),
+                environmental_score=float(s.get("environment_score", 50.0)),
+                feasibility_score=float(s.get("feasibility_score", 50.0)),
+                composite_score=float(s.get("composite_score", 50.0)),
+                risk_level=risk_enum,
+                time_to_implement_months=int(s.get("time_to_implement_months", 12)),
+                cost_estimate_usd_millions=float(s.get("cost_estimate_usd_millions", 0.0)),
+                projected_population_impact=float(s.get("projected_population_impact", 0.0)),
+                key_risks=s.get("key_risks", []),
+                key_benefits=s.get("key_benefits", []),
+                scenario_data=s.get("scenario_data", {})
+            )
+            db.add(sim)
+
+        # 5. Final Report
         fr = state.get("final_report")
         if fr:
             report = FinalReport(

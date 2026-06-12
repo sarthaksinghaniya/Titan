@@ -50,7 +50,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.types import Send
 
 from app.agents.state import GovernanceState, MinisterOutput, DebateArgument, VoteRecord
-from app.agents.ministers import CABINET, PRIME_MINISTER, MINISTER_REGISTRY, OppositionMinister
+from app.agents.ministers import CABINET, PRIME_MINISTER, MINISTER_REGISTRY, SIMULATION_AGENT, OppositionMinister
 from app.core.config import settings
 from app.services.event_bus import EventBus
 
@@ -382,7 +382,7 @@ async def node_tally_votes(state: GovernanceState) -> Dict[str, Any]:
     logger.info("Votes tallied", winner=winner, percentage=pct, consensus=consensus)
     return {
         "vote_tally": dict(tally),
-        "current_phase": "synthesizing",
+        "current_phase": "simulating",
         "metadata": {
             **state.get("metadata", {}),
             "winning_option": winner,
@@ -390,6 +390,42 @@ async def node_tally_votes(state: GovernanceState) -> Dict[str, Any]:
             "consensus_level": consensus,
             "total_votes": total,
         },
+    }
+
+
+# ══════════════════════════════════════════════════════════════
+# NODE 8.5 — SIMULATION ENGINE
+# Simulates the winning option across 4 distinct futures
+# ══════════════════════════════════════════════════════════════
+
+async def node_simulation_phase(state: GovernanceState) -> Dict[str, Any]:
+    """
+    Runs the future simulation engine on the winning policy option.
+    Generates Future A, B, C, D.
+    """
+    logger.info("Simulation phase starting")
+    
+    problem = state["problem"]
+    winning_option = state.get("metadata", {}).get("winning_option")
+    if not winning_option:
+        options = state.get("policy_options", [])
+        winning_option = options[0] if options else "Option 1"
+
+    futures = ["Future A (Optimistic)", "Future B (Pessimistic)", "Future C (Tech-Driven)", "Future D (Resource-Constrained)"]
+    
+    async def run_sim(future_name: str):
+        result = await SIMULATION_AGENT.simulate(problem, winning_option, future_name)
+        result["_timestamp"] = _ts()
+        return result
+
+    # Run the 4 futures in parallel
+    results = await asyncio.gather(*[run_sim(f) for f in futures], return_exceptions=False)
+    sim_results = list(results)
+
+    logger.info("Simulations complete", futures_simulated=len(sim_results))
+    return {
+        "simulation_results": sim_results,
+        "current_phase": "synthesizing",
     }
 
 

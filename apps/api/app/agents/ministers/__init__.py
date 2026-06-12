@@ -9,6 +9,7 @@ from app.agents.ministers.ministers import (
     OppositionMinister,
     PrimeMinister,
 )
+from app.agents.ministers.simulation import SIMULATION_AGENT
 
 # ── Cabinet registry — ordered for display ────────────────────
 CABINET: list[BaseMinisterAgent] = [
@@ -26,6 +27,8 @@ PRIME_MINISTER = PrimeMinister()
 MINISTER_REGISTRY: dict[str, BaseMinisterAgent] = {
     m.role: m for m in [*CABINET, PRIME_MINISTER]
 }
+# Simulation agent is special, not a base minister
+MINISTER_REGISTRY[SIMULATION_AGENT.role] = SIMULATION_AGENT
 
 __all__ = [
     "BaseMinisterAgent",
@@ -39,5 +42,6 @@ __all__ = [
     "PrimeMinister",
     "CABINET",
     "PRIME_MINISTER",
+    "SIMULATION_AGENT",
     "MINISTER_REGISTRY",
 ]

@@ -48,6 +48,10 @@ Full Flow:
                     └──────────┬──────────┘
                                │
                     ┌──────────▼──────────┐
+                    │  simulation_phase    │
+                    └──────────┬──────────┘
+                               │
+                    ┌──────────▼──────────┐
                     │  prime_minister_     │
                     │     synthesis        │
                     └──────────┬──────────┘
@@ -73,6 +77,7 @@ from app.agents.nodes import (
     node_rebuttal_round,
     node_minister_vote,
     node_tally_votes,
+    node_simulation_phase,
     node_prime_minister_synthesis,
     node_error_handler,
     route_after_validation,
@@ -99,6 +104,7 @@ def build_graph() -> Any:
     g.add_node("rebuttal_round",           node_rebuttal_round)
     g.add_node("minister_vote",            node_minister_vote)        # fan-out target
     g.add_node("tally_votes",              node_tally_votes)
+    g.add_node("simulation_phase",         node_simulation_phase)
     g.add_node("prime_minister_synthesis", node_prime_minister_synthesis)
     g.add_node("error_handler",            node_error_handler)
 
@@ -139,8 +145,11 @@ def build_graph() -> Any:
     # ── Collect voting fan-out results ─────────────────────────
     g.add_edge("minister_vote", "tally_votes")
 
+    # ── Simulation phase ───────────────────────────────────────
+    g.add_edge("tally_votes", "simulation_phase")
+
     # ── PM synthesis ───────────────────────────────────────────
-    g.add_edge("tally_votes", "prime_minister_synthesis")
+    g.add_edge("simulation_phase", "prime_minister_synthesis")
 
     # ── Final edge: synthesis → END | error ───────────────────
     g.add_conditional_edges(
