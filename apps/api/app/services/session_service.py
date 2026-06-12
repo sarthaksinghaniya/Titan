@@ -192,6 +192,7 @@ class SessionService:
             report = FinalReport(
                 id=uuid.uuid4(), project_id=pid, chosen_option=fr.get("chosen_option", ""),
                 executive_summary=fr.get("executive_summary", ""), overall_rationale=fr.get("rationale", ""),
+                confidence_score=float(fr.get("confidence_score", 0.0)),
                 implementation_steps=fr.get("implementation_steps", []), success_metrics=fr.get("success_metrics", []),
                 risks_and_mitigations=fr.get("risks_and_mitigations", {}), expected_outcomes=fr.get("expected_outcomes", []),
                 review_timeline=fr.get("review_timeline", ""), total_votes=fr.get("vote_breakdown", {}).get("total_votes", 0),

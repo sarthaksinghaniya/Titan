@@ -298,6 +298,7 @@ class FinalReport(Base):
     chosen_option           = Column(String(500), nullable=False)
     executive_summary       = Column(Text, nullable=False)
     overall_rationale       = Column(Text, nullable=False)
+    confidence_score        = Column(Float, nullable=False, default=0.0)
 
     # ── Structured Output ─────────────────────────────────────
     implementation_steps    = Column(JSONB, nullable=False, default=list)       # List[PolicyStep]

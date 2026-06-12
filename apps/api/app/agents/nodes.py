@@ -448,6 +448,7 @@ async def node_prime_minister_synthesis(state: GovernanceState) -> Dict[str, Any
         + state.get("opposition_attacks", [])
         + state.get("rebuttals", [])
     )
+    simulations = state.get("simulation_results", [])
     votes     = state.get("votes", [])
     tally     = state.get("vote_tally", {})
     options   = state.get("policy_options", [])
@@ -469,6 +470,13 @@ async def node_prime_minister_synthesis(state: GovernanceState) -> Dict[str, Any
         f"{d.get('argument','')[:200]}..."
         for d in debates
     )
+    
+    simulations_block = "\n".join(
+        f"[{s.get('future_name', 'Future')}]: Option '{s.get('option_name','')}' "
+        f"scored {s.get('composite_score',0)}/100 (Econ: {s.get('economic_score',0)}, Env: {s.get('environment_score',0)}, Social: {s.get('social_score',0)}, Feasibility: {s.get('feasibility_score',0)}). "
+        f"Risk Level: {s.get('risk_level','')}"
+        for s in simulations
+    )
 
     vote_block = "\n".join(
         f"- {v.get('agent_role','?')}: '{v.get('voted_option','')}' "
@@ -481,7 +489,8 @@ async def node_prime_minister_synthesis(state: GovernanceState) -> Dict[str, Any
     pm_schema = """{
   "executive_summary": "<2-3 sentence plain-language summary of the final decision>",
   "chosen_option": "<exact option name>",
-  "rationale": "<3-4 sentences citing specific minister inputs and vote outcome>",
+  "rationale": "<your detailed reasoning for selecting this strategy, citing debate and simulation results>",
+  "confidence_score": <1-100 float representing your confidence in this decision>,
   "implementation_steps": [
     {
       "phase": "Phase 1 — Foundation",
@@ -520,13 +529,20 @@ MINISTERIAL ANALYSES:
 DEBATE TRANSCRIPT:
 {debate_block}
 
+SIMULATION RESULTS:
+{simulations_block}
+
 VOTE RESULTS:
 {vote_block}
 TALLY: {tally_block}
 WINNING OPTION: {meta.get('winning_option','?')} ({meta.get('vote_percentage',0)}% — {meta.get('consensus_level','?')} consensus)
 
-Synthesise all of the above into a final binding policy. Be specific, realistic, and politically defensible.
-Address the Opposition's strongest attacks directly.
+Synthesise all of the above into a final binding policy (the selected strategy). Be specific, realistic, and politically defensible.
+You must generate:
+1. Reasoning (rationale)
+2. Risk analysis (risks_and_mitigations)
+3. Expected impact (expected_outcomes)
+4. Confidence score (confidence_score)
 
 Return ONLY this JSON (no markdown fences, no text outside the JSON):
 {pm_schema}"""

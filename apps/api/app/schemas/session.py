@@ -128,6 +128,7 @@ class FinalReportSchema(BaseModel):
     chosen_option: str
     executive_summary: str
     overall_rationale: str
+    confidence_score: float
     implementation_steps: List[Dict[str, Any]]
     success_metrics: List[Any]
     risks_and_mitigations: Dict[str, Any]
