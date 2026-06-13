@@ -32,7 +32,57 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB, UUID as PG_UUID
+from sqlalchemy.types import TypeDecorator, CHAR, JSON
+
+class GUID(TypeDecorator):
+    """Platform-independent GUID type.
+    Uses PostgreSQL's UUID type, otherwise uses CHAR(36), storing as string.
+    """
+    impl = CHAR
+    cache_ok = True
+
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('as_uuid', None)
+        super().__init__(*args, **kwargs)
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        else:
+            return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        else:
+            return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        else:
+            return uuid.UUID(str(value))
+
+class SafeJSON(TypeDecorator):
+    """Platform-independent JSON type.
+    Uses PostgreSQL's JSONB type, otherwise uses standard JSON.
+    """
+    impl = JSON
+    cache_ok = True
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(PG_JSONB())
+        else:
+            return dialect.type_descriptor(JSON())
+
+UUID = GUID
+JSONB = SafeJSON
+
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
