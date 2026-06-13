@@ -18,7 +18,11 @@ export function useEventStream(projectId: string | null) {
   useEffect(() => {
     if (!projectId) return;
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/sessions/${projectId}/stream`;
+    const isServer = typeof window === "undefined";
+    const apiUrl = isServer
+      ? (process.env.INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000")
+      : ""; // Browser uses relative path to go through Next.js proxy
+    const url = `${apiUrl}/api/v1/sessions/${projectId}/stream`;
     console.log(`Connecting to SSE: ${url}`);
     
     const es = new EventSource(url);

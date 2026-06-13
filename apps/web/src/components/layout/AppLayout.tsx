@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useEventStream } from '@/hooks/useEventStream';
+import { ApiErrorBoundary } from '@/components/error/ApiErrorBoundary';
 
 const navItems = [
   { href: '/', label: 'Command Center', icon: LayoutDashboard },
@@ -104,15 +105,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main Content Area */}
       <main className="flex-1 relative z-10 overflow-y-auto overflow-x-hidden">
         <div className="max-w-6xl mx-auto px-8 py-10">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-          >
-            {children}
-          </motion.div>
+          <ApiErrorBoundary>
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              {children}
+            </motion.div>
+          </ApiErrorBoundary>
         </div>
       </main>
     </div>

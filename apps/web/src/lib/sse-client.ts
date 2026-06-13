@@ -66,7 +66,10 @@ export class SSEConnection {
 }
 
 export function createSSEConnection(sessionId: string, options: SSEConnectionOptions = {}): SSEConnection {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const isServer = typeof window === "undefined";
+  const apiUrl = isServer
+    ? (process.env.INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000")
+    : ""; // Browser uses relative path to go through Next.js proxy
   const url = `${apiUrl}/api/v1/sessions/${sessionId}/stream`;
   return new SSEConnection(url, options);
 }

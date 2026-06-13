@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Network, ArrowRight, Loader2, Cpu } from 'lucide-react';
-import api from '@/lib/api';
+import { sessionsApi } from '@/lib/api-client';
 import { useSessionStore } from '@/store/useSessionStore';
 
 export default function Home() {
@@ -28,13 +28,13 @@ export default function Home() {
     resetSession(); // Clear any previous session
 
     try {
-      const { data } = await api.post('/sessions', {
+      const data = await sessionsApi.create({
         problem,
         context: context.trim() || undefined,
       });
 
       setProblemText(problem);
-      setProjectId(data.project_id);
+      setProjectId(data.session_id);
       router.push('/parliament');
     } catch (err: any) {
       console.error(err);
