@@ -113,21 +113,10 @@ def build_graph() -> Any:
     # ── Entry point ────────────────────────────────────────────
     g.set_entry_point("input_validation")
 
-    # ── Conditional edge: validation → analyze | fail ─────────
+    # ── Conditional edge: validation → parallel analysis | fail ───
     g.add_conditional_edges(
         "input_validation",
         route_after_validation,
-        {
-            "analyzing": "minister_analysis",   # uses Send fan-out via route_to_ministers
-            "failed":    "error_handler",
-        },
-    )
-
-    # ── Parallel fan-out: 6 ministers analyze simultaneously ───
-    # route_to_ministers returns List[Send("minister_analysis", {...})]
-    g.add_conditional_edges(
-        "input_validation",
-        route_to_ministers,
     )
 
     # ── Collect fan-out results ────────────────────────────────

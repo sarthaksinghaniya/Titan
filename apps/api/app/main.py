@@ -64,9 +64,15 @@ def create_application() -> FastAPI:
         )
 
     # ─── Health Check ────────────────────────────────────────
+    # Note: Health check is also available at /api/v1/health via projects router
+    # This root endpoint is kept for monitoring tools
     @app.get("/health")
-    async def health_check():
-        return {"status": "healthy", "timestamp": __import__('datetime').datetime.now(datetime.timezone.utc).isoformat()}
+    async def root_health_check():
+        from datetime import datetime, timezone
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
 
     return app
 

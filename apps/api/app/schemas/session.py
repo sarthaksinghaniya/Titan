@@ -24,9 +24,16 @@ class CreateProjectRequest(BaseModel):
 
 
 class CreateProjectResponse(BaseModel):
-    project_id: str
+    session_id: str = None  # Alias for project_id for frontend compatibility
+    project_id: str = None
     status: ProjectStatus
     message: str
+    
+    def __init__(self, **data):
+        # Support both session_id and project_id naming conventions
+        if 'project_id' in data and 'session_id' not in data:
+            data['session_id'] = data['project_id']
+        super().__init__(**data)
 
 
 class ProjectSchema(BaseModel):

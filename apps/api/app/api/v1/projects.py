@@ -72,6 +72,7 @@ async def create_project(
 
     logger.info("Project created", project_id=str(project.id))
     return CreateProjectResponse(
+        session_id=str(project.id),  # Frontend expects session_id
         project_id=str(project.id),
         status=project.status,
         message="Cabinet session initiated. Ministers are assembling...",

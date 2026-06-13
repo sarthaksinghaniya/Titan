@@ -672,9 +672,11 @@ async def node_error_handler(state: GovernanceState) -> Dict[str, Any]:
 # CONDITIONAL EDGES
 # ══════════════════════════════════════════════════════════════
 
-def route_after_validation(state: GovernanceState) -> str:
-    """After validation: proceed or fail."""
-    return "failed" if state.get("error") else "analyzing"
+def route_after_validation(state: GovernanceState) -> str | List[Send]:
+    """After validation: proceed to parallel analysis or fail."""
+    if state.get("error") or state.get("current_phase") == "failed":
+        return "error_handler"
+    return route_to_ministers(state)
 
 
 def route_after_synthesis(state: GovernanceState) -> str:
