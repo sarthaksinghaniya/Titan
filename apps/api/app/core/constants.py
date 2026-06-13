@@ -94,6 +94,7 @@ MINISTER_DISPLAY_NAMES: Dict[MinisterRole, str] = {
 }
 
 MINISTER_DESCRIPTIONS: Dict[MinisterRole, str] = {
+    MinisterRole.PRIME_MINISTER: "Cabinet leadership, policy consensus, and final synthesis",
     MinisterRole.ECONOMIC_MINISTER: "GDP, employment, fiscal policy, economic stability",
     MinisterRole.TECHNOLOGY_MINISTER: "Innovation, digital infrastructure, tech adoption",
     MinisterRole.INFRASTRUCTURE_MINISTER: "Roads, energy, water, physical infrastructure",
