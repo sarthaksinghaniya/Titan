@@ -587,10 +587,6 @@ async def node_black_swan_engine(state: GovernanceState) -> Dict[str, Any]:
     """
     Stress-tests the finalized strategy against a random catastrophic Black Swan event.
     """
-    pid = state.get("project_id", "")
-    from app.services.session_service import SessionService
-    await SessionService.update_phase(pid, "black_swan")
-
     report = state.get("final_report", {})
     if not report:
         return {}
