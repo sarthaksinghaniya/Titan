@@ -139,8 +139,22 @@ function createApiClient(): AxiosInstance {
 
       // HTTP error responses (with status code)
       const status = error.response.status;
-      const detail = error.response.data?.detail || error.response.data?.message;
+      const rawDetail = error.response.data?.detail || error.response.data?.message;
       const errorCode = error.response.data?.code || "HTTP_ERROR";
+
+      let detail = "";
+      if (Array.isArray(rawDetail)) {
+        detail = rawDetail
+          .map((d: any) => {
+            const path = d.loc ? d.loc.filter((l: any) => l !== "body" && l !== "query").join(".") : "";
+            return `${path ? path + ": " : ""}${d.msg || JSON.stringify(d)}`;
+          })
+          .join(", ");
+      } else if (typeof rawDetail === "object" && rawDetail !== null) {
+        detail = JSON.stringify(rawDetail);
+      } else {
+        detail = rawDetail || "";
+      }
 
       let message = `Server error (${status})`;
 
@@ -154,6 +168,8 @@ function createApiClient(): AxiosInstance {
         message = `Endpoint not found: ${error.config?.url}. The backend API may not have the required endpoints.`;
       } else if (status === 422) {
         message = `Validation failed: ${detail || "Request data did not match expected format"}`;
+      } else if (status === 429) {
+        message = "Too many requests. You have exceeded the rate limit. Please try again later.";
       } else if (status === 500) {
         message = `Server error: ${detail || "An internal error occurred. Please try again later."}`;
       } else if (status === 503) {
