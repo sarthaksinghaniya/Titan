@@ -3,6 +3,7 @@ import { useSessionStore } from '../store/useSessionStore';
 
 export function useEventStream(projectId: string | null) {
   const {
+    phase,
     setPhase,
     setError,
     setConnected,
@@ -16,7 +17,7 @@ export function useEventStream(projectId: string | null) {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || phase === 'completed' || phase === 'failed') return;
 
     const isServer = typeof window === "undefined";
     const apiUrl = isServer
@@ -108,5 +109,5 @@ export function useEventStream(projectId: string | null) {
       eventSourceRef.current = null;
       setConnected(false);
     };
-  }, [projectId, setPhase, setError, setConnected, appendAnalysis, appendDebate, appendVote, setSimulations, setFinalReport]);
+  }, [projectId, phase, setPhase, setError, setConnected, appendAnalysis, appendDebate, appendVote, setSimulations, setFinalReport]);
 }
