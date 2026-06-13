@@ -74,7 +74,78 @@ class SessionService:
 
                 # Compile and run the graph
                 graph = create_governance_graph()
-                final_state = await graph.ainvoke(initial_state)
+                
+                # Use astream to run the graph and publish events in real-time
+                final_state = initial_state.copy()
+                async for event in graph.astream(initial_state):
+                    for node_name, node_output in event.items():
+                        if not node_output or not isinstance(node_output, dict):
+                            continue
+                        # Update the final_state dictionary, merging list reducers
+                        for key, val in node_output.items():
+                            if val is None:
+                                continue
+                            if key in ("analyses", "debate_arguments", "opposition_attacks", "rebuttals", "votes"):
+                                if not final_state.get(key):
+                                    final_state[key] = []
+                                # Avoid duplicating items already in the list
+                                for item in val:
+                                    if item not in final_state[key]:
+                                        final_state[key].append(item)
+                            elif key == "metadata" and "metadata" in final_state and isinstance(final_state["metadata"], dict):
+                                final_state["metadata"] = {**final_state["metadata"], **val}
+                            else:
+                                final_state[key] = val
+
+                        # Publish specific intermediate events to event_bus
+                        if "current_phase" in node_output:
+                            await self.event_bus.publish(project_id, "phase_changed", {
+                                "project_id": project_id,
+                                "new_phase": node_output["current_phase"]
+                            })
+
+                        if node_name == "minister_analysis":
+                            analyses = node_output.get("analyses", [])
+                            for a in analyses:
+                                await self.event_bus.publish(project_id, "minister_analysis", {
+                                    "project_id": project_id,
+                                    "analysis": a
+                                })
+                        elif node_name == "debate_round":
+                            args = node_output.get("debate_arguments", [])
+                            for arg in args:
+                                await self.event_bus.publish(project_id, "debate_argument", {
+                                    "project_id": project_id,
+                                    "argument": arg
+                                })
+                        elif node_name == "opposition_attack":
+                            attacks = node_output.get("opposition_attacks", [])
+                            for attack in attacks:
+                                await self.event_bus.publish(project_id, "opposition_attack", {
+                                    "project_id": project_id,
+                                    "argument": attack
+                                })
+                        elif node_name == "rebuttal_round":
+                            rebuttals = node_output.get("rebuttals", [])
+                            for rebuttal in rebuttals:
+                                await self.event_bus.publish(project_id, "rebuttal", {
+                                    "project_id": project_id,
+                                    "argument": rebuttal
+                                })
+                        elif node_name == "minister_vote":
+                            votes = node_output.get("votes", [])
+                            for vote in votes:
+                                await self.event_bus.publish(project_id, "minister_vote", {
+                                    "project_id": project_id,
+                                    "vote": vote
+                                })
+                        elif node_name == "simulation_phase":
+                            sims = node_output.get("simulation_results", [])
+                            if sims:
+                                await self.event_bus.publish(project_id, "simulation_complete", {
+                                    "project_id": project_id,
+                                    "results": sims
+                                })
 
                 if final_state.get("error") or final_state.get("current_phase") == "failed":
                     error_msg = final_state.get("error", "Unknown failure")

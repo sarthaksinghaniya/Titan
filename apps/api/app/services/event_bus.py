@@ -34,17 +34,18 @@ class EventBus:
         self._get_queues(session_id).append(queue)
         try:
             while True:
-                event = await asyncio.wait_for(queue.get(), timeout=30.0)
-                if event is None:
-                    break
-                yield event
-        except asyncio.TimeoutError:
-            # Send heartbeat on timeout then continue waiting
-            yield {
-                "event": "heartbeat",
-                "data": {"session_id": session_id},
-                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
-            }
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    if event is None:
+                        break
+                    yield event
+                except asyncio.TimeoutError:
+                    # Send heartbeat on timeout then continue waiting
+                    yield {
+                        "event": "heartbeat",
+                        "data": {"session_id": session_id},
+                        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                    }
         except asyncio.CancelledError:
             pass
         finally:
