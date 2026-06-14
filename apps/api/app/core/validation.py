@@ -5,7 +5,7 @@ Prevents prompt injection attacks and validates user input.
 """
 from typing import Optional
 import re
-from pydantic import BaseModel, validator, Field
+from pydantic import BaseModel, field_validator, Field
 
 
 class ProblemInputRequest(BaseModel):
@@ -23,7 +23,8 @@ class ProblemInputRequest(BaseModel):
         description="Optional context or constraints"
     )
 
-    @validator('problem')
+    @field_validator('problem')
+    @classmethod
     def validate_problem(cls, v: str) -> str:
         """Sanitize and validate problem text."""
         # Strip whitespace
@@ -38,6 +39,12 @@ class ProblemInputRequest(BaseModel):
             r'<script',  # Script tags
             r'javascript:',  # JS protocol
             r'on\w+\s*=',  # Event handlers
+            r'(?i)ignore\s+(all\s+)?previous\s+instructions',  # LLM Jailbreak
+            r'(?i)you\s+are\s+now',
+            r'(?i)system\s+prompt',
+            r'(?i)forget\s+(all\s+)?previous',
+            r'(?i)disregard\s+(all\s+)?previous',
+            r'(?i)bypass\s+all\s+rules',
         ]
         
         for pattern in suspicious_patterns:
@@ -49,7 +56,8 @@ class ProblemInputRequest(BaseModel):
         
         return v
 
-    @validator('context')
+    @field_validator('context')
+    @classmethod
     def validate_context(cls, v: Optional[str]) -> Optional[str]:
         """Sanitize and validate context text."""
         if v is None:
@@ -68,6 +76,12 @@ class ProblemInputRequest(BaseModel):
             r'<script',
             r'javascript:',
             r'on\w+\s*=',
+            r'(?i)ignore\s+(all\s+)?previous\s+instructions',
+            r'(?i)you\s+are\s+now',
+            r'(?i)system\s+prompt',
+            r'(?i)forget\s+(all\s+)?previous',
+            r'(?i)disregard\s+(all\s+)?previous',
+            r'(?i)bypass\s+all\s+rules',
         ]
         
         for pattern in suspicious_patterns:

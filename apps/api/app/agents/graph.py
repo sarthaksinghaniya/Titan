@@ -63,9 +63,14 @@ Full Flow:
 """
 from __future__ import annotations
 
-from typing import Any
+import time
+from functools import wraps
+from typing import Any, Dict
 
-from langgraph.graph import END, StateGraph
+import structlog
+from langgraph.graph import StateGraph, END
+
+logger = structlog.get_logger(__name__)
 
 from app.agents.state import GovernanceState
 from app.agents.nodes import (
@@ -88,6 +93,18 @@ from app.agents.nodes import (
 )
 
 
+def time_node(func):
+    @wraps(func)
+    async def wrapper(state: GovernanceState):
+        t0 = time.monotonic()
+        try:
+            return await func(state)
+        finally:
+            elapsed_ms = int((time.monotonic() - t0) * 1000)
+            logger.info("Node execution time", node=func.__name__, elapsed_ms=elapsed_ms)
+    return wrapper
+
+
 def build_graph() -> Any:
     """
     Construct and compile the TITAN governance StateGraph.
@@ -97,18 +114,18 @@ def build_graph() -> Any:
     g = StateGraph(GovernanceState)
 
     # ── Register all nodes ─────────────────────────────────────
-    g.add_node("input_validation",         node_input_validation)
-    g.add_node("minister_analysis",        node_minister_analysis)   # fan-out target
-    g.add_node("aggregate_analyses",       node_aggregate_analyses)
-    g.add_node("debate_round",             node_debate_round)
-    g.add_node("opposition_attack",        node_opposition_attack)
-    g.add_node("rebuttal_round",           node_rebuttal_round)
-    g.add_node("minister_vote",            node_minister_vote)        # fan-out target
-    g.add_node("tally_votes",              node_tally_votes)
-    g.add_node("simulation_phase",         node_simulation_phase)
-    g.add_node("prime_minister_synthesis", node_prime_minister_synthesis)
-    g.add_node("black_swan_engine",        node_black_swan_engine)
-    g.add_node("error_handler",            node_error_handler)
+    g.add_node("input_validation",         time_node(node_input_validation))
+    g.add_node("minister_analysis",        time_node(node_minister_analysis))   # fan-out target
+    g.add_node("aggregate_analyses",       time_node(node_aggregate_analyses))
+    g.add_node("debate_round",             time_node(node_debate_round))
+    g.add_node("opposition_attack",        time_node(node_opposition_attack))
+    g.add_node("rebuttal_round",           time_node(node_rebuttal_round))
+    g.add_node("minister_vote",            time_node(node_minister_vote))        # fan-out target
+    g.add_node("tally_votes",              time_node(node_tally_votes))
+    g.add_node("simulation_phase",         time_node(node_simulation_phase))
+    g.add_node("prime_minister_synthesis", time_node(node_prime_minister_synthesis))
+    g.add_node("black_swan_engine",        time_node(node_black_swan_engine))
+    g.add_node("error_handler",            time_node(node_error_handler))
 
     # ── Entry point ────────────────────────────────────────────
     g.set_entry_point("input_validation")

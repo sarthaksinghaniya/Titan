@@ -4,7 +4,7 @@ from typing import AsyncGenerator, List
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,7 @@ from app.schemas.session import (
 from app.services.session_service import SessionService
 from app.services.event_bus import EventBus
 from app.repositories.project import project_repo
+from app.core.rate_limit import limiter
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -55,7 +56,9 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> HealthResponse:
 
 # ─── Create Project ───────────────────────────────────────────
 @router.post("/sessions", response_model=CreateProjectResponse, status_code=201, tags=["projects"])
+@limiter.limit("5/minute")
 async def create_project(
+    request_obj: Request,
     request: CreateProjectRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),

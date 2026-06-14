@@ -305,9 +305,9 @@ async def node_rebuttal_round(state: GovernanceState) -> Dict[str, Any]:
 
     results = await asyncio.gather(
         *[rebuttal(m) for m in CABINET],
-        return_exceptions=False,
+        return_exceptions=True,
     )
-    rebuttals = [r for r in results if r is not None]
+    rebuttals = [r for r in results if r is not None and not isinstance(r, Exception)]
 
     logger.info("Rebuttals complete", count=len(rebuttals))
     return {"rebuttals": rebuttals, "current_phase": "voting"}
@@ -563,10 +563,13 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
 
     llm = _build_llm_pro()
     try:
-        resp = await llm.ainvoke([
-            SystemMessage(content=PRIME_MINISTER.system_prompt),
-            HumanMessage(content=user_msg),
-        ])
+        resp = await asyncio.wait_for(
+            llm.ainvoke([
+                SystemMessage(content=PRIME_MINISTER.system_prompt),
+                HumanMessage(content=user_msg),
+            ]),
+            timeout=settings.AGENT_TIMEOUT_SECONDS
+        )
         final = extract_json(str(resp.content))
         if not final:
             raise ValueError("Empty JSON from PM synthesis")
@@ -634,8 +637,20 @@ Return ONLY valid JSON matching this schema:
 
     from langchain_core.messages import HumanMessage
     llm = _build_llm_flash()
-    response = await llm.ainvoke([HumanMessage(content=prompt)])
-    content = response.content.strip()
+    
+    try:
+        response = await asyncio.wait_for(
+            llm.ainvoke([HumanMessage(content=prompt)]),
+            timeout=settings.AGENT_TIMEOUT_SECONDS
+        )
+    except Exception as e:
+        logger.error("Black swan LLM call failed", error=str(e))
+        response = None
+
+    if response:
+        content = response.content.strip()
+    else:
+        content = ""
 
     try:
         from app.agents.ministers.base import extract_json

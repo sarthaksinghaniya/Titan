@@ -7,6 +7,7 @@ analysis_schema, and an async invoke() that always returns structured JSON.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import time
@@ -163,10 +164,13 @@ Analyze this problem from your ministerial perspective.
 
         t0 = time.monotonic()
         try:
-            resp = await llm.ainvoke([
-                SystemMessage(content=self.system_prompt),
-                HumanMessage(content=user_msg),
-            ])
+            resp = await asyncio.wait_for(
+                llm.ainvoke([
+                    SystemMessage(content=self.system_prompt),
+                    HumanMessage(content=user_msg),
+                ]),
+                timeout=settings.AGENT_TIMEOUT_SECONDS
+            )
             elapsed_ms = int((time.monotonic() - t0) * 1000)
             result = extract_json(str(resp.content))
             result.setdefault("agent_role", self.role)
@@ -216,10 +220,13 @@ You are in ROUND {round_number} — PHASE: {phase.upper()}.
 {self.DEBATE_SCHEMA}"""
 
         try:
-            resp = await llm.ainvoke([
-                SystemMessage(content=self.system_prompt),
-                HumanMessage(content=user_msg),
-            ])
+            resp = await asyncio.wait_for(
+                llm.ainvoke([
+                    SystemMessage(content=self.system_prompt),
+                    HumanMessage(content=user_msg),
+                ]),
+                timeout=settings.AGENT_TIMEOUT_SECONDS
+            )
             result = extract_json(str(resp.content))
             result.setdefault("agent_role", self.role)
             result.setdefault("round_number", round_number)
@@ -261,10 +268,13 @@ Your constraints: {'; '.join(self.constraints[:2])}
 {self.VOTE_SCHEMA}"""
 
         try:
-            resp = await llm.ainvoke([
-                SystemMessage(content=self.system_prompt),
-                HumanMessage(content=user_msg),
-            ])
+            resp = await asyncio.wait_for(
+                llm.ainvoke([
+                    SystemMessage(content=self.system_prompt),
+                    HumanMessage(content=user_msg),
+                ]),
+                timeout=settings.AGENT_TIMEOUT_SECONDS
+            )
             result = extract_json(str(resp.content))
             result.setdefault("agent_role", self.role)
             result.setdefault("voted_option", policy_options[0] if policy_options else "Option 1")
