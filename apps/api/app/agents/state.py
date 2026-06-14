@@ -26,6 +26,9 @@ class MinisterOutput(TypedDict):
     proposed_solutions: List[str]    # 2-3 concrete options
     constraints_applied: List[str]   # what limits their recommendations
     red_lines: List[str]             # conditions they will never accept
+    evidence_score: int
+    cited_sources: List[str]
+    assumptions_challenged: List[str]
     priority_score: float            # 0-100, how urgent this minister sees the issue
     confidence: float                # 0-100, certainty in their analysis
 
@@ -40,6 +43,9 @@ class DebateArgument(TypedDict):
     defending_positions: List[str]   # positions being defended
     concessions: List[str]           # points conceded to others
     new_evidence: List[str]          # new data points introduced
+    contradictions_detected: List[str]
+    cited_sources: List[str]
+    confidence_score: float
     word_count: int
 
 

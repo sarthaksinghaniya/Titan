@@ -13,7 +13,12 @@ export type MinisterRole =
   | "citizen_minister"
   | "environment_minister"
   | "opposition_minister"
-  | "simulation_agent";
+  | "simulation_agent"
+  | "research_agent"
+  | "fact_checker_agent"
+  | "risk_agent"
+  | "economic_forecast_agent"
+  | "scenario_planning_agent";
 
 export type SessionStatus =
   | "pending"
@@ -286,5 +291,50 @@ export const MINISTER_META: Record<MinisterRole, MinisterMeta> = {
     gradient: "from-sky-500 to-cyan-600",
     icon: "FlaskConical",
     focus_areas: ["Stress testing", "Scenario modeling", "Risk scoring"],
+  },
+  research_agent: {
+    role: "research_agent",
+    title: "Research Agent",
+    description: "Evidence retrieval and empirical context compression",
+    color: "#a855f7",
+    gradient: "from-purple-500 to-fuchsia-600",
+    icon: "Library",
+    focus_areas: ["Empirical evidence", "Data synthesis", "Precedents"],
+  },
+  fact_checker_agent: {
+    role: "fact_checker_agent",
+    title: "Fact Checker Agent",
+    description: "Audits claims and flags unsupported assumptions",
+    color: "#3b82f6",
+    gradient: "from-blue-500 to-indigo-600",
+    icon: "CheckCircle",
+    focus_areas: ["Evidence validation", "Assumption testing", "Contradiction detection"],
+  },
+  risk_agent: {
+    role: "risk_agent",
+    title: "Risk Agent",
+    description: "Identifies systemic vulnerabilities and tail risks",
+    color: "#f43f5e",
+    gradient: "from-rose-500 to-red-600",
+    icon: "AlertTriangle",
+    focus_areas: ["Tail risks", "Systemic failure", "Black swan events"],
+  },
+  economic_forecast_agent: {
+    role: "economic_forecast_agent",
+    title: "Economic Forecast Agent",
+    description: "Quantitative modeling of fiscal and market impact",
+    color: "#84cc16",
+    gradient: "from-lime-500 to-green-600",
+    icon: "BarChart4",
+    focus_areas: ["GDP modeling", "Inflation forecasting", "Fiscal cost"],
+  },
+  scenario_planning_agent: {
+    role: "scenario_planning_agent",
+    title: "Scenario Planning Agent",
+    description: "Constructs divergent future state simulations",
+    color: "#14b8a6",
+    gradient: "from-teal-500 to-emerald-600",
+    icon: "Map",
+    focus_areas: ["Future modeling", "Divergent paths", "Contingency planning"],
   },
 };

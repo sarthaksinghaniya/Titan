@@ -51,6 +51,7 @@ from langgraph.types import Send
 
 from app.agents.state import GovernanceState, MinisterOutput, DebateArgument, VoteRecord
 from app.agents.ministers import CABINET, PRIME_MINISTER, MINISTER_REGISTRY, SIMULATION_AGENT, OppositionMinister
+from app.agents.ministers.specialists import FactCheckerAgent, RiskAgent, EconomicForecastAgent, ScenarioPlanningAgent
 from app.core.config import settings
 from app.services.event_bus import EventBus
 
@@ -208,6 +209,31 @@ async def node_aggregate_analyses(state: GovernanceState) -> Dict[str, Any]:
     return {
         "current_phase": "debating",
         "policy_options": options,
+    }
+
+
+# ══════════════════════════════════════════════════════════════
+# NODE 3.5 — FACT CHECK
+# Audits the analyses before debate begins
+# ══════════════════════════════════════════════════════════════
+
+async def node_fact_check(state: GovernanceState) -> Dict[str, Any]:
+    """
+    Fact checker audits the analyses against the evidence dossier.
+    """
+    logger.info("Fact checker starting")
+    analyses = state.get("analyses", [])
+    problem = state["problem"]
+    dossier = state.get("evidence_dossier", "")
+    
+    agent = FactCheckerAgent()
+    result = await agent.audit_analyses(problem, analyses, dossier)
+    result["_timestamp"] = _ts()
+    
+    logger.info("Fact check complete", contradictions=len(result.get("contradictions_detected", [])))
+    # We append the fact check to the debate arguments so it appears in the UI
+    return {
+        "debate_arguments": [result] if result else []
     }
 
 
@@ -407,17 +433,16 @@ async def node_tally_votes(state: GovernanceState) -> Dict[str, Any]:
 
 # ══════════════════════════════════════════════════════════════
 # NODE 8.5 — SIMULATION ENGINE
-# Simulates the winning option across 4 distinct futures
+# Simulates the winning option across distinct futures
 # ══════════════════════════════════════════════════════════════
 
 async def node_simulation_phase(state: GovernanceState) -> Dict[str, Any]:
     """
     Runs the future simulation engine on the winning policy option.
-    Generates Future A, B, C, D.
+    Generates Future A, B, C, D using ScenarioPlanningAgent and EconomicForecastAgent.
     """
     logger.info("Simulation phase starting")
     
-    problem = state["problem"]
     winning_option = state.get("metadata", {}).get("winning_option")
     if not winning_option:
         options = state.get("policy_options", [])
@@ -425,8 +450,27 @@ async def node_simulation_phase(state: GovernanceState) -> Dict[str, Any]:
 
     futures = ["Future A (Optimistic)", "Future B (Pessimistic)", "Future C (Tech-Driven)", "Future D (Resource-Constrained)"]
     
+    scenario_agent = ScenarioPlanningAgent()
+    econ_agent = EconomicForecastAgent()
+
+    # Economic forecast is constant for the option
+    econ_forecast = await econ_agent.forecast(winning_option)
+    econ_score = econ_forecast.get("economic_score", 50)
+
     async def run_sim(future_name: str):
-        result = await SIMULATION_AGENT.simulate(problem, winning_option, future_name)
+        result = await scenario_agent.plan_scenario(winning_option, future_name)
+        result["economic_score"] = econ_score # Inject econ forecast
+        result["future_name"] = future_name
+        result["option_name"] = winning_option
+        
+        # Calculate composite
+        scores = [
+            result.get("economic_score", 50),
+            result.get("environmental_score", 50),
+            result.get("social_score", 50),
+            result.get("feasibility_score", 50)
+        ]
+        result["composite_score"] = round(sum(scores) / 4.0, 1)
         result["_timestamp"] = _ts()
         return result
 
@@ -600,72 +644,26 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
 
 async def node_black_swan_engine(state: GovernanceState) -> Dict[str, Any]:
     """
-    Stress-tests the finalized strategy against a random catastrophic Black Swan event.
+    Stress-tests the finalized strategy against a random catastrophic Black Swan event
+    using the RiskAgent.
     """
     report = state.get("final_report", {})
     if not report:
         return {}
 
-    # 1. Randomly select a crisis
-    import random
-    crises = [
-        "Global Economic Recession (-15% GDP)",
-        "Global Pandemic (Lockdowns, 30% workforce impact)",
-        "Catastrophic 500-Year Flood (Infrastructure destroyed)",
-        "Severe Supply Chain Shortage (Critical materials unavailable)",
-        "Massive Political Unrest (Riots, 40% drop in approval)"
-    ]
-    selected_crisis = random.choice(crises)
+    logger.info("Black swan engine starting")
+    agent = RiskAgent()
+    policy_str = json.dumps(report, indent=2)
+    results = await agent.generate_black_swan(policy_str)
 
-    schema = """{
-  "black_swan_crisis": "<the selected crisis>",
-  "black_swan_impact": "<detailed 3-sentence analysis of how the strategy holds up or fails>",
-  "resilience_score": <1-100 float estimating strategy survivability>
-}"""
-
-    prompt = f"""You are the TITAN Black Swan Resilience Engine.
-A finalized governance strategy has been passed to you.
-
-STRATEGY CHOSEN: {report.get('chosen_option', 'Unknown')}
-RATIONALE: {report.get('rationale', '')}
-RISK MITIGATIONS: {json.dumps(report.get('risks_and_mitigations', {}))}
-
-A BLACK SWAN EVENT HAS JUST OCCURRED:
-{selected_crisis}
-
-Analyze how the strategy survives this unpredictable, massive shock. Generate a resilience score.
-Return ONLY valid JSON matching this schema:
-{schema}"""
-
-    from langchain_core.messages import HumanMessage
-    llm = _build_llm_flash()
-    
-    try:
-        response = await asyncio.wait_for(
-            llm.ainvoke([HumanMessage(content=prompt)]),
-            timeout=settings.AGENT_TIMEOUT_SECONDS
-        )
-    except Exception as e:
-        logger.error("Black swan LLM call failed", error=str(e))
-        response = None
-
-    if response:
-        content = response.content.strip()
-    else:
-        content = ""
-
-    try:
-        from app.agents.ministers.base import extract_json
-        results = extract_json(content)
-        if not results:
-            raise ValueError("Empty JSON")
-    except Exception:
+    if not results:
         results = {
-            "black_swan_crisis": selected_crisis,
+            "black_swan_crisis": "Unknown Systemic Failure",
             "black_swan_impact": "Failed to generate structured impact analysis.",
             "resilience_score": 0.0
         }
         
+    logger.info("Black swan complete", score=results.get("resilience_score", 0))
     return {
         "black_swan_results": results,
         "current_phase": "completed"

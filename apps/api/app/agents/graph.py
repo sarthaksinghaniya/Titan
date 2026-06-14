@@ -77,6 +77,7 @@ from app.agents.nodes import (
     node_input_validation,
     node_minister_analysis,
     node_aggregate_analyses,
+    node_fact_check,
     node_debate_round,
     node_opposition_attack,
     node_rebuttal_round,
@@ -123,8 +124,9 @@ def build_graph() -> Any:
     g.add_node("research_retrieval",       time_node(node_research_retrieval))
     g.add_node("evidence_ranking",         time_node(node_evidence_ranking))
     g.add_node("context_compression",      time_node(node_context_compression))
-    g.add_node("minister_analysis",        time_node(node_minister_analysis))   # fan-out target
+    g.add_node("minister_analysis",        time_node(node_minister_analysis))
     g.add_node("aggregate_analyses",       time_node(node_aggregate_analyses))
+    g.add_node("fact_check",               time_node(node_fact_check))
     g.add_node("debate_round",             time_node(node_debate_round))
     g.add_node("opposition_attack",        time_node(node_opposition_attack))
     g.add_node("rebuttal_round",           time_node(node_rebuttal_round))
@@ -153,7 +155,8 @@ def build_graph() -> Any:
     g.add_edge("minister_analysis", "aggregate_analyses")
 
     # ── Linear debate pipeline ─────────────────────────────────
-    g.add_edge("aggregate_analyses", "debate_round")
+    g.add_edge("aggregate_analyses", "fact_check")
+    g.add_edge("fact_check", "debate_round")
     g.add_edge("debate_round",       "opposition_attack")
     g.add_edge("opposition_attack",  "rebuttal_round")
 

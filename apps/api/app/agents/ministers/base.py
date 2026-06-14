@@ -98,6 +98,9 @@ Return ONLY a valid JSON object — no markdown, no explanation before or after:
   ],
   "constraints_applied": ["<constraint 1>", "<constraint 2>"],
   "red_lines": ["<condition you will never accept 1>", "<condition 2>"],
+  "evidence_score": <0-100 integer>,
+  "cited_sources": ["<source 1>", "<source 2>"],
+  "assumptions_challenged": ["<assumption 1>", "<assumption 2>"],
   "priority_score": <0-100 integer>,
   "confidence": <0-100 integer>
 }"""
@@ -113,6 +116,9 @@ Return ONLY a valid JSON object:
   "defending_positions": ["<positions you are protecting>"],
   "concessions": ["<points you accept from others>"],
   "new_evidence": ["<new data or reasoning you introduce>"],
+  "contradictions_detected": ["<contradiction 1>", "<contradiction 2>"],
+  "cited_sources": ["<source 1>", "<source 2>"],
+  "confidence_score": <0-100 integer>,
   "word_count": <integer>
 }"""
 
