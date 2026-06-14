@@ -26,26 +26,27 @@ class SpecialistAgent:
 
 class FactCheckerAgent(SpecialistAgent):
     role = "fact_checker_agent"
-    title = "Fact Checker"
+    title = "Fact Verification Agent"
     
     SCHEMA = """
 {
   "agent_role": "fact_checker_agent",
   "phase": "fact_check",
-  "argument": "<your full audit report, identifying specific unsupported claims or logical contradictions from the ministers. Include corrections.>",
-  "attacking_roles": ["<roles you are correcting>"],
-  "defending_positions": [],
-  "concessions": [],
-  "new_evidence": ["<evidence you bring to correct the record>"],
-  "contradictions_detected": ["<contradiction 1>"],
-  "cited_sources": ["<source 1>"],
-  "confidence_score": 90,
-  "word_count": <integer>
+  "verified_claims": [
+    {"claim": "<claim from minister>", "status": "verified|refuted", "evidence_citation": "<source>"}
+  ],
+  "contradictions_detected": [
+    {"minister": "<role>", "contradiction": "<description>"}
+  ],
+  "unsupported_conclusions": [
+    {"minister": "<role>", "conclusion": "<unsupported claim>"}
+  ],
+  "overall_confidence_score": 85,
+  "summary": "<short audit summary>"
 }"""
 
     async def audit_analyses(self, problem: str, all_analyses: List[Dict[str, Any]], evidence_dossier: str) -> Dict[str, Any]:
-        """Runs after the initial analysis fan-out to flag hallucinations."""
-        llm = ModelOrchestrator.get_model(ModelTask.VALIDATION)
+        """Runs after the initial analysis fan-out to flag hallucinations and unsupported claims."""
         analyses_ctx = "\n\n".join(
             f"[{a.get('role_title', a.get('agent_role', '?'))}]\n"
             f"Assessment: {a.get('situation_assessment', '')}\n"
@@ -54,10 +55,10 @@ class FactCheckerAgent(SpecialistAgent):
             for a in all_analyses
         )
 
-        sys_prompt = """You are the Fact Checker Agent.
-Your job is to audit the ministers' claims against the provided Evidence Dossier.
-If a minister invented a statistic, flag it. If their proposed solution contradicts the data, expose it.
-Be clinical, objective, and unforgiving of hallucinations."""
+        sys_prompt = """You are the Fact Verification Agent.
+Your mandate is strictly to verify claims made by the ministers against the provided Evidence Dossier.
+Detect contradictions, identify unsupported conclusions, and verify factual accuracy.
+Be clinical, objective, and unforgiving of hallucinations. Do not participate in the debate, only output the verified findings."""
 
         user_msg = f"""PROBLEM: {problem}
 
@@ -71,12 +72,11 @@ Audit these analyses. Return ONLY JSON:
 {self.SCHEMA}"""
 
         try:
-            resp = await asyncio.wait_for(
-                llm.ainvoke([SystemMessage(content=sys_prompt), HumanMessage(content=user_msg)]),
-                timeout=settings.AGENT_TIMEOUT_SECONDS
+            resp = await ModelOrchestrator.call_model_with_resilience(
+                ModelTask.VALIDATION,
+                [SystemMessage(content=sys_prompt), HumanMessage(content=user_msg)]
             )
             result = extract_json(str(resp.content))
-            result["round_number"] = 0
             return result
         except Exception as e:
             logger.error("Fact check failed", error=str(e))

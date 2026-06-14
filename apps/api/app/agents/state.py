@@ -81,6 +81,7 @@ class GovernanceState(TypedDict):
     analyses: Annotated[List[MinisterOutput], operator.add]
 
     # ── Phase 2 : Structured debate arguments ──────────────────
+    fact_check_report: Optional[Dict[str, Any]]
     debate_arguments: Annotated[List[DebateArgument], operator.add]
 
     # ── Phase 3 : Opposition attack outputs ────────────────────

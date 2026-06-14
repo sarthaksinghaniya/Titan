@@ -213,9 +213,10 @@ async def node_fact_check(state: GovernanceState) -> Dict[str, Any]:
     result["_timestamp"] = _ts()
     
     logger.info("Fact check complete", contradictions=len(result.get("contradictions_detected", [])))
-    # We append the fact check to the debate arguments so it appears in the UI
+    
+    # Store the fact check report separately in the state, so it's not a debate argument
     return {
-        "debate_arguments": [result] if result else []
+        "fact_check_report": result
     }
 
 
