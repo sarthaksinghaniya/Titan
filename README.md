@@ -36,7 +36,7 @@
 
 ## 📖 Overview
 
-**TITAN** (*Transparency Intelligence Technology Agent Network*) is a production-grade autonomous governance intelligence platform. Submit any societal problem — water scarcity, unemployment, pollution — and a full AI Cabinet convenes to deliver a comprehensive, debate-tested policy recommendation.
+**TITAN V3** (*Transparency Intelligence Technology Agent Network*) is a production-grade autonomous evidence-driven governance intelligence platform. Submit any societal problem — water scarcity, unemployment, pollution — and a full AI Cabinet convenes to deliver a comprehensive, debate-tested policy recommendation backed by real-world RAG evidence, semantic contradiction detection, and scenario impact forecasting.
 
 ```
 You: "India's urban unemployment has hit 35% due to AI automation"
