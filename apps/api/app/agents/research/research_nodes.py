@@ -136,28 +136,34 @@ Return ONLY JSON:
             "current_phase": "knowledge_retrieval"
         }
 
+from app.services.rag import rag_pipeline
+
 # ══════════════════════════════════════════════════════════════
 # NODE 0D — KNOWLEDGE RETRIEVAL
 # ══════════════════════════════════════════════════════════════
 
 async def node_knowledge_retrieval(state: GovernanceState) -> Dict[str, Any]:
-    """Queries Vector DB for precedents and builds final dossier."""
-    problem = state["problem"]
-    validated = state.get("validated_evidence", [])
-    
+    """Chunks validated evidence, embeds it, and semantic searches for precedents."""
     logger.info("Knowledge retrieval starting")
-    
-    # Retrieve Long-Term Memory (Precedents)
-    precedents = vector_store_manager.search_precedents(problem, top_k=2)
-    for p in precedents:
-        validated.append({
-            "source": "TITAN Historical Memory",
-            "title": f"Past Resolution: {p.get('metadata', {}).get('project_id', 'Unknown')}",
-            "snippet": p.get('content', '')
-        })
-        
+    problem = state["problem"]
+    context = state.get("context", "")
+    session_id = state.get("project_id", "unknown_session")
+    validated_evidence = state.get("validated_evidence", [])
+
+    # 1. Ingest external evidence into the vector store
+    await rag_pipeline.ingest_evidence(validated_evidence, session_id)
+
+    # 2. Retrieve and Rerank combined precedents and external evidence
+    reranked_chunks = await rag_pipeline.retrieve_and_rerank(
+        query=problem,
+        context=context,
+        session_id=session_id,
+        top_k=5
+    )
+
+    logger.info("Knowledge retrieval complete", chunks=len(reranked_chunks))
     return {
-        "validated_evidence": validated,
+        "precedents": reranked_chunks,
         "current_phase": "compressing_context"
     }
 
@@ -171,31 +177,31 @@ async def node_context_compression(state: GovernanceState) -> Dict[str, Any]:
     logger.info("Context compression starting")
     problem = state["problem"]
     
-    validated = state.get("validated_evidence", [])
+    precedents = state.get("precedents", [])
     
-    if not validated:
-        dossier = "No external evidence could be retrieved for this problem. Rely on foundational principles."
+    if not precedents:
+        dossier = "No empirical evidence or past precedents could be retrieved. Rely on foundational principles."
         return {
             "evidence_dossier": dossier,
             "current_phase": "analyzing"
         }
 
     evidence_text = "\n".join(
-        f"- [{item.get('source')}]: {item.get('title')}\n  {item.get('snippet')}"
-        for item in validated[-10:] # Take last 10 to avoid token overflow
+        f"- [{item.get('metadata', {}).get('source', 'System')}]: {item.get('metadata', {}).get('title', 'Precedent')} (Confidence: {item.get('composite_confidence', 50.0):.1f})\n  {item.get('content', '')}"
+        for item in precedents
     )
 
     prompt = f"""You are the Chief Research Officer for the TITAN Cabinet.
-Synthesize the following validated evidence into a dense, highly factual 'Evidence Dossier'.
+Synthesize the following highly confident, reranked evidence chunks into a dense, factual 'Evidence Dossier'.
 Extract every statistic, empirical claim, and historical precedent.
-Do NOT generate opinions. Do NOT solve the problem. Only organize the facts.
+Do NOT generate opinions. Do NOT solve the problem. Only organize the facts explicitly mapping them to their sources.
 
 PROBLEM: {problem}
 
-VALIDATED EVIDENCE:
+RERANKED EVIDENCE:
 {evidence_text}
 
-Format the output as a Markdown summary (max 300 words)."""
+Format the output as a Markdown summary (max 400 words) with explicit citations."""
 
     try:
         resp = await ModelOrchestrator.call_model_with_resilience(

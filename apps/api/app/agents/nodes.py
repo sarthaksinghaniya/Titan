@@ -637,11 +637,16 @@ async def node_recommendations(state: GovernanceState) -> Dict[str, Any]:
     # a specific user-requested format (e.g. PDF structure, email, executive brief).
     # For now, we will structure it explicitly from the PM report and validated evidence.
     
-    validated_evidence = state.get("validated_evidence", [])
-    citations = [
-        {"source": ev.get("source", "Unknown"), "title": ev.get("title", "Unknown")}
-        for ev in validated_evidence[:3]
-    ]
+    precedents = state.get("precedents", [])
+    citations = []
+    for p in precedents[:3]:
+        meta = p.get("metadata", {})
+        citations.append({
+            "source": meta.get("source", "Historical Memory"),
+            "title": meta.get("title", "Precedent"),
+            "url": meta.get("url", ""),
+            "confidence_score": p.get("composite_confidence", meta.get("base_confidence", 50.0))
+        })
 
     recommendations = {
         "title": f"Strategic Directive: {report.get('chosen_option', 'Strategy')}",
