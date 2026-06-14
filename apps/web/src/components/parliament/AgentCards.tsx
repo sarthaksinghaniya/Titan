@@ -13,6 +13,11 @@ const agentConfig: Record<string, { icon: React.ElementType, name: string }> = {
   citizen_minister: { icon: UsersIcon, name: "Citizen Minister" },
   environment_minister: { icon: Leaf, name: "Environment Minister" },
   opposition_minister: { icon: AlertTriangle, name: "Opposition Minister" },
+  fact_checker: { icon: Shield, name: "Fact Checker" },
+  scenario_planner: { icon: BrainCircuit, name: "Scenario Planner" },
+  economic_forecaster: { icon: Landmark, name: "Econ Forecaster" },
+  risk_agent: { icon: AlertTriangle, name: "Risk Agent" },
+  research_agent: { icon: UsersIcon, name: "Research Agent" }
 };
 
 export function AgentCards() {

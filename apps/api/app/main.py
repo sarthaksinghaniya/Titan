@@ -12,7 +12,14 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.database import init_db
 from app.core.logging import setup_logging
+from app.core.rate_limit import limiter
 from app.api.v1.router import api_router
+
+from prometheus_fastapi_instrumentator import Instrumentator
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from starlette.middleware.base import BaseHTTPMiddleware
+import uuid
 
 # Setup structured logging
 setup_logging()
@@ -41,6 +48,33 @@ def create_application() -> FastAPI:
         redoc_url="/redoc" if settings.API_DEBUG else None,
         lifespan=lifespan,
     )
+
+    # ─── Rate Limiter ────────────────────────────────────────
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    # ─── Server Timing Middleware ────────────────────────────
+    import time
+    class ServerTimingMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            start_time = time.monotonic()
+            response = await call_next(request)
+            process_time = time.monotonic() - start_time
+            response.headers["Server-Timing"] = f"total;dur={process_time * 1000:.2f}"
+            return response
+            
+    app.add_middleware(ServerTimingMiddleware)
+
+    # ─── Request ID Middleware ───────────────────────────────
+    class RequestIdMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            req_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+            structlog.contextvars.bind_contextvars(request_id=req_id)
+            response = await call_next(request)
+            response.headers["X-Request-ID"] = req_id
+            return response
+            
+    app.add_middleware(RequestIdMiddleware)
 
     # ─── CORS ────────────────────────────────────────────────
     app.add_middleware(
@@ -73,6 +107,9 @@ def create_application() -> FastAPI:
             "status": "healthy",
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
+
+    # ─── Prometheus Metrics ──────────────────────────────────
+    Instrumentator().instrument(app).expose(app, tags=["system"])
 
     return app
 

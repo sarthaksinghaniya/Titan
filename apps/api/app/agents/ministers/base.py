@@ -134,11 +134,11 @@ Return ONLY a valid JSON object:
   "veto_options": ["<options you actively oppose and why — format: option: reason>"]
 }"""
 
-    def _get_llm(self) -> BaseChatModel:
+    def _get_task(self) -> str:
         # We will determine the task based on context, but default to DEBATE
         # so ministers get reasoning models.
-        from app.agents.orchestrator import ModelOrchestrator, ModelTask
-        return ModelOrchestrator.get_model(ModelTask.DEBATE)
+        from app.agents.orchestrator import ModelTask
+        return ModelTask.DEBATE
 
     async def analyze(self, problem: str, context: str = "", evidence_dossier: str = "") -> Dict[str, Any]:
         """Phase 1 — independent analysis. Returns MinisterOutput dict."""
@@ -163,14 +163,15 @@ YOUR CONSTRAINTS:
 Analyze this problem from your ministerial perspective.
 {self.ANALYSIS_SCHEMA}"""
 
+        from app.agents.orchestrator import ModelOrchestrator
         t0 = time.monotonic()
         try:
-            resp = await asyncio.wait_for(
-                llm.ainvoke([
+            resp = await ModelOrchestrator.call_model_with_resilience(
+                self._get_task(),
+                [
                     SystemMessage(content=self.system_prompt),
                     HumanMessage(content=user_msg),
-                ]),
-                timeout=settings.AGENT_TIMEOUT_SECONDS
+                ]
             )
             elapsed_ms = int((time.monotonic() - t0) * 1000)
             result = extract_json(str(resp.content))
@@ -191,7 +192,6 @@ Analyze this problem from your ministerial perspective.
         prior_arguments: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Phase 2/4 — debate argument or rebuttal. Returns DebateArgument dict."""
-        llm = self._get_llm()
 
         analyses_ctx = "\n\n".join(
             f"[{a.get('role_title', a.get('agent_role', '?'))}]\n"
@@ -220,13 +220,14 @@ You are in ROUND {round_number} — PHASE: {phase.upper()}.
 
 {self.DEBATE_SCHEMA}"""
 
+        from app.agents.orchestrator import ModelOrchestrator
         try:
-            resp = await asyncio.wait_for(
-                llm.ainvoke([
+            resp = await ModelOrchestrator.call_model_with_resilience(
+                self._get_task(),
+                [
                     SystemMessage(content=self.system_prompt),
                     HumanMessage(content=user_msg),
-                ]),
-                timeout=settings.AGENT_TIMEOUT_SECONDS
+                ]
             )
             result = extract_json(str(resp.content))
             result.setdefault("agent_role", self.role)
@@ -246,7 +247,6 @@ You are in ROUND {round_number} — PHASE: {phase.upper()}.
         all_debates: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """Phase 5 — cast vote. Returns VoteRecord dict."""
-        llm = self._get_llm()
 
         options_block = "\n".join(f"  {i+1}. {opt}" for i, opt in enumerate(policy_options))
         debate_ctx = "\n".join(
@@ -268,13 +268,14 @@ Your constraints: {'; '.join(self.constraints[:2])}
 
 {self.VOTE_SCHEMA}"""
 
+        from app.agents.orchestrator import ModelOrchestrator
         try:
-            resp = await asyncio.wait_for(
-                llm.ainvoke([
+            resp = await ModelOrchestrator.call_model_with_resilience(
+                self._get_task(),
+                [
                     SystemMessage(content=self.system_prompt),
                     HumanMessage(content=user_msg),
-                ]),
-                timeout=settings.AGENT_TIMEOUT_SECONDS
+                ]
             )
             result = extract_json(str(resp.content))
             result.setdefault("agent_role", self.role)

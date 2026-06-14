@@ -196,6 +196,17 @@ class SessionService:
                     if bs_results:
                         final_report_payload.update(bs_results)
 
+                    # ─── Telemetry: Graph Runtime & Memory ────────────
+                    runtime_ms = int((datetime.now(timezone.utc) - project.created_at).total_seconds() * 1000)
+                    import psutil
+                    import os
+                    process = psutil.Process(os.getpid())
+                    mem_info = process.memory_info()
+                    logger.info("Graph execution completed", 
+                                project_id=project_id, 
+                                graph_runtime_ms=runtime_ms,
+                                memory_usage_mb=round(mem_info.rss / (1024 * 1024), 2))
+
                     await self.event_bus.publish(
                         project_id,
                         "session_complete",

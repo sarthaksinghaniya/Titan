@@ -589,14 +589,13 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
     from app.agents.ministers.base import extract_json
     from langchain_core.messages import HumanMessage, SystemMessage
 
-    llm = ModelOrchestrator.get_model(ModelTask.DEBATE)
     try:
-        resp = await asyncio.wait_for(
-            llm.ainvoke([
+        resp = await ModelOrchestrator.call_model_with_resilience(
+            ModelTask.DEBATE,
+            [
                 SystemMessage(content=PRIME_MINISTER.system_prompt),
                 HumanMessage(content=user_msg),
-            ]),
-            timeout=settings.AGENT_TIMEOUT_SECONDS
+            ]
         )
         final = extract_json(str(resp.content))
         if not final:
@@ -610,6 +609,7 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
         return {
             "final_report": final,
             "metadata": {**meta, "completed_at": _ts()},
+            "current_phase": "black_swan"
         }
 
     except Exception as exc:

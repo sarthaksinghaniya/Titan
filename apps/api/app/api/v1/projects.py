@@ -24,6 +24,8 @@ from app.schemas.session import (
     FinalReportSchema,
     HealthResponse,
 )
+from app.api.deps import get_current_user
+from app.models.user import User
 from app.services.session_service import SessionService
 from app.services.event_bus import EventBus
 from app.repositories.project import project_repo
@@ -62,6 +64,7 @@ async def create_project(
     request: CreateProjectRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> CreateProjectResponse:
     """
     Create a new governance project and start the agent graph in the background.
@@ -88,6 +91,7 @@ async def list_projects(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> PaginatedResponse:
     """List all projects with pagination, ordered by creation date (newest first)."""
     items, total = await project_repo.get_multi_paginated(db, page=page, page_size=page_size)
@@ -106,6 +110,7 @@ async def list_projects(
 async def get_project(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> ProjectSchema:
     """Get a single project by ID."""
     project = await project_repo.get(db, project_id)
@@ -119,6 +124,7 @@ async def get_project(
 async def get_project_report(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> ProjectReportSchema:
     """Get the full report for a project including all agent outputs."""
     project = await project_repo.get_with_relations(db, project_id)
@@ -183,6 +189,7 @@ async def stream_project(project_id: str) -> StreamingResponse:
 async def get_debate_history(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> List[DebateSchema]:
     """
     Get the chronological debate history for replayability.

@@ -38,7 +38,11 @@ export default function Home() {
       router.push('/parliament');
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.detail || 'Failed to initialize TITAN session');
+      if (!err.response) {
+        setError('Backend offline: Could not connect to the TITAN API. Please ensure the backend server is running.');
+      } else {
+        setError(err.response?.data?.detail || 'Failed to initialize TITAN session');
+      }
       setLoading(false);
     }
   };

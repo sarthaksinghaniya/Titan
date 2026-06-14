@@ -57,6 +57,21 @@ engine = create_async_engine(
     **engine_args
 )
 
+from sqlalchemy import event
+import time
+
+@event.listens_for(engine.sync_engine, "before_cursor_execute")
+def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    context._query_start_time = time.monotonic()
+
+@event.listens_for(engine.sync_engine, "after_cursor_execute")
+def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    total = time.monotonic() - context._query_start_time
+    if total > 0.05:  # log slow queries > 50ms
+        logger.warning("Slow SQL Query", duration_ms=round(total * 1000, 2), statement=statement[:200])
+    else:
+        logger.debug("SQL Query executed", duration_ms=round(total * 1000, 2))
+
 # ─── Session Factory ─────────────────────────────────────────
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

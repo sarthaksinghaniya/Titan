@@ -1,12 +1,23 @@
 'use client';
 
-import React from 'react';
+import React, { Profiler } from 'react';
 import { motion } from 'framer-motion';
 import { useSessionStore } from '@/store/useSessionStore';
 import { FileText, CheckCircle, ShieldAlert, Zap, Layers, AlertCircle } from 'lucide-react';
 
-export function DecisionReport() {
-  const { finalReport, phase } = useSessionStore();
+const onRenderCallback = (
+  id: string,
+  phase: "mount" | "update",
+  actualDuration: number
+) => {
+  if (actualDuration > 10) {
+    console.debug(`[Profiler] ${id} - ${phase} took ${actualDuration.toFixed(2)}ms`);
+  }
+};
+
+export const DecisionReport = React.memo(function DecisionReport() {
+  const finalReport = useSessionStore(state => state.finalReport);
+  const phase = useSessionStore(state => state.phase);
 
   if (!finalReport && phase !== 'completed') return null;
   if (!finalReport) {
@@ -20,7 +31,8 @@ export function DecisionReport() {
   }
 
   return (
-    <div className="space-y-6">
+    <Profiler id="DecisionReport" onRender={onRenderCallback}>
+      <div className="space-y-6">
       {/* Header Banner */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -208,6 +220,6 @@ export function DecisionReport() {
           </motion.div>
         </div>
       </div>
-    </div>
+    </Profiler>
   );
-}
+});

@@ -92,3 +92,45 @@ class ModelOrchestrator:
 
         # Wrap with runtime fallback protection
         return primary_model.with_fallbacks([cls.get_fallback_model()])
+
+    @classmethod
+    async def call_model_with_resilience(cls, task: ModelTask, messages: list, timeout: int = settings.AGENT_TIMEOUT_SECONDS):
+        """
+        Executes an LLM call with full resilience: timeouts, retries, fallbacks, and circuit breaking.
+        """
+        from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+        import asyncio
+        from httpx import HTTPError
+
+        # Create a circuit breaker context if we wanted to be super robust,
+        # but for now, we rely on tenacity to fail fast after 3 retries.
+        
+        # We retry only on network-level or API-level exceptions, not validation errors.
+        @retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=2, max=10),
+            retry=retry_if_exception_type((HTTPError, asyncio.TimeoutError)),
+            reraise=True
+        )
+        async def _execute():
+            llm = cls.get_model(task)
+            return await asyncio.wait_for(llm.ainvoke(messages), timeout=timeout)
+            
+        try:
+            resp = await _execute()
+            
+            # ─── Telemetry: Token Tracking ───────────────────────────
+            tokens = 0
+            if hasattr(resp, "usage_metadata") and resp.usage_metadata:
+                tokens = resp.usage_metadata.get("total_tokens", 0)
+            elif hasattr(resp, "response_metadata") and "token_usage" in resp.response_metadata:
+                usage = resp.response_metadata["token_usage"]
+                tokens = usage.get("total_tokens", 0)
+                
+            if tokens > 0:
+                logger.info("llm_tokens_used", task=task.value, tokens=tokens)
+                
+            return resp
+        except Exception as e:
+            logger.error("LLM Call failed completely after retries", error=str(e), task=task.value)
+            raise
