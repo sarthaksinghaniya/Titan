@@ -22,11 +22,14 @@ export const WorkflowGraph = React.memo(function WorkflowGraph() {
   const phase = useSessionStore(state => state.phase);
 
   const getStatus = (nodePhase: string) => {
-    const order = ['pending', 'researching', 'analyzing', 'debating', 'voting', 'simulating', 'synthesizing', 'black_swan', 'completed'];
+    const order = [
+      'pending', 'researching', 'analyzing', 'debating', 'voting', 
+      'forecasting', 'synthesizing', 'recommending', 'black_swan', 'completed'
+    ];
     
-    // Convert granular research phases to 'researching'
+    // Map granular research phases to 'researching' for UI simplicity
     let effectivePhase = phase;
-    if (['validating_evidence', 'compressing_context'].includes(phase)) {
+    if (['collecting_evidence', 'validating_evidence', 'knowledge_retrieval', 'compressing_context'].includes(phase)) {
         effectivePhase = 'researching';
     }
 
@@ -57,8 +60,8 @@ export const WorkflowGraph = React.memo(function WorkflowGraph() {
     },
     {
       id: 'researching',
-      position: { x: 250, y: 100 },
-      data: { label: 'Knowledge Retrieval' },
+      position: { x: 220, y: 100 },
+      data: { label: 'Evidence Collection' },
       style: {
         background: '#0d0d14',
         color: '#fff',
@@ -71,7 +74,7 @@ export const WorkflowGraph = React.memo(function WorkflowGraph() {
     },
     {
       id: 'analyzing',
-      position: { x: 450, y: 100 },
+      position: { x: 400, y: 100 },
       data: { label: 'Ministers Analysis' },
       style: {
         background: '#0d0d14',
@@ -85,7 +88,7 @@ export const WorkflowGraph = React.memo(function WorkflowGraph() {
     },
     {
       id: 'debating',
-      position: { x: 650, y: 100 },
+      position: { x: 580, y: 100 },
       data: { label: 'Debate Round' },
       style: {
         background: '#0d0d14',
@@ -99,7 +102,7 @@ export const WorkflowGraph = React.memo(function WorkflowGraph() {
     },
     {
       id: 'voting',
-      position: { x: 850, y: 100 },
+      position: { x: 740, y: 100 },
       data: { label: 'Voting Phase' },
       style: {
         background: '#0d0d14',
@@ -112,23 +115,23 @@ export const WorkflowGraph = React.memo(function WorkflowGraph() {
       },
     },
     {
-      id: 'simulating',
-      position: { x: 1050, y: 100 },
-      data: { label: 'Simulation Engine' },
+      id: 'forecasting',
+      position: { x: 900, y: 100 },
+      data: { label: 'Forecasting Engine' },
       style: {
         background: '#0d0d14',
         color: '#fff',
-        border: getStatus('simulating') === 'active' ? '2px solid #0ea5e9' : getStatus('simulating') === 'completed' ? '1px solid #10b981' : '1px solid #333',
-        boxShadow: getStatus('simulating') === 'active' ? '0 0 15px rgba(14,165,233,0.5)' : 'none',
+        border: getStatus('forecasting') === 'active' ? '2px solid #0ea5e9' : getStatus('forecasting') === 'completed' ? '1px solid #10b981' : '1px solid #333',
+        boxShadow: getStatus('forecasting') === 'active' ? '0 0 15px rgba(14,165,233,0.5)' : 'none',
         borderRadius: '8px',
         padding: '10px 20px',
-        opacity: getStatus('simulating') === 'pending' ? 0.5 : 1,
+        opacity: getStatus('forecasting') === 'pending' ? 0.5 : 1,
       },
     },
     {
       id: 'synthesizing',
-      position: { x: 1250, y: 100 },
-      data: { label: 'Final Decision' },
+      position: { x: 1080, y: 100 },
+      data: { label: 'PM Synthesis' },
       style: {
         background: '#0d0d14',
         color: '#fff',
@@ -140,8 +143,22 @@ export const WorkflowGraph = React.memo(function WorkflowGraph() {
       },
     },
     {
+      id: 'recommending',
+      position: { x: 1260, y: 100 },
+      data: { label: 'Strategic Directive' },
+      style: {
+        background: '#0d0d14',
+        color: '#fff',
+        border: getStatus('recommending') === 'active' ? '2px solid #14b8a6' : getStatus('recommending') === 'completed' ? '1px solid #10b981' : '1px solid #333',
+        boxShadow: getStatus('recommending') === 'active' ? '0 0 15px rgba(20,184,166,0.5)' : 'none',
+        borderRadius: '8px',
+        padding: '10px 20px',
+        opacity: getStatus('recommending') === 'pending' ? 0.5 : 1,
+      },
+    },
+    {
       id: 'black_swan',
-      position: { x: 1450, y: 100 },
+      position: { x: 1460, y: 100 },
       data: { label: 'Black Swan Engine' },
       style: {
         background: '#0d0d14',
@@ -191,14 +208,14 @@ export const WorkflowGraph = React.memo(function WorkflowGraph() {
     {
       id: 'e5',
       source: 'voting',
-      target: 'simulating',
-      animated: getStatus('simulating') === 'active',
-      style: { stroke: getStatus('simulating') !== 'pending' ? '#10b981' : '#333', strokeWidth: 2 },
-      markerEnd: { type: MarkerType.ArrowClosed, color: getStatus('simulating') !== 'pending' ? '#10b981' : '#333' }
+      target: 'forecasting',
+      animated: getStatus('forecasting') === 'active',
+      style: { stroke: getStatus('forecasting') !== 'pending' ? '#10b981' : '#333', strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: getStatus('forecasting') !== 'pending' ? '#10b981' : '#333' }
     },
     {
       id: 'e6',
-      source: 'simulating',
+      source: 'forecasting',
       target: 'synthesizing',
       animated: getStatus('synthesizing') === 'active',
       style: { stroke: getStatus('synthesizing') !== 'pending' ? '#10b981' : '#333', strokeWidth: 2 },
@@ -207,6 +224,14 @@ export const WorkflowGraph = React.memo(function WorkflowGraph() {
     {
       id: 'e7',
       source: 'synthesizing',
+      target: 'recommending',
+      animated: getStatus('recommending') === 'active',
+      style: { stroke: getStatus('recommending') !== 'pending' ? '#10b981' : '#333', strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: getStatus('recommending') !== 'pending' ? '#10b981' : '#333' }
+    },
+    {
+      id: 'e8',
+      source: 'recommending',
       target: 'black_swan',
       animated: getStatus('black_swan') === 'active',
       style: { stroke: getStatus('black_swan') !== 'pending' ? '#10b981' : '#333', strokeWidth: 2 },

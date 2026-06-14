@@ -83,8 +83,9 @@ from app.agents.nodes import (
     node_rebuttal_round,
     node_minister_vote,
     node_tally_votes,
-    node_simulation_phase,
+    node_forecasting,
     node_prime_minister_synthesis,
+    node_recommendations,
     node_black_swan_engine,
     node_error_handler,
     route_after_validation,
@@ -93,8 +94,10 @@ from app.agents.nodes import (
     route_after_synthesis,
 )
 from app.agents.research.research_nodes import (
-    node_research_retrieval,
-    node_evidence_ranking,
+    node_research_generation,
+    node_evidence_collection,
+    node_evidence_validation,
+    node_knowledge_retrieval,
     node_context_compression,
 )
 
@@ -121,8 +124,10 @@ def build_graph() -> Any:
 
     # ── Register all nodes ─────────────────────────────────────
     g.add_node("input_validation",         time_node(node_input_validation))
-    g.add_node("research_retrieval",       time_node(node_research_retrieval))
-    g.add_node("evidence_ranking",         time_node(node_evidence_ranking))
+    g.add_node("research_generation",      time_node(node_research_generation))
+    g.add_node("evidence_collection",      time_node(node_evidence_collection))
+    g.add_node("evidence_validation",      time_node(node_evidence_validation))
+    g.add_node("knowledge_retrieval",      time_node(node_knowledge_retrieval))
     g.add_node("context_compression",      time_node(node_context_compression))
     g.add_node("minister_analysis",        time_node(node_minister_analysis))
     g.add_node("aggregate_analyses",       time_node(node_aggregate_analyses))
@@ -132,8 +137,9 @@ def build_graph() -> Any:
     g.add_node("rebuttal_round",           time_node(node_rebuttal_round))
     g.add_node("minister_vote",            time_node(node_minister_vote))        # fan-out target
     g.add_node("tally_votes",              time_node(node_tally_votes))
-    g.add_node("simulation_phase",         time_node(node_simulation_phase))
+    g.add_node("forecasting",              time_node(node_forecasting))
     g.add_node("prime_minister_synthesis", time_node(node_prime_minister_synthesis))
+    g.add_node("recommendations",          time_node(node_recommendations))
     g.add_node("black_swan_engine",        time_node(node_black_swan_engine))
     g.add_node("error_handler",            time_node(node_error_handler))
 
@@ -147,8 +153,10 @@ def build_graph() -> Any:
     )
 
     # ── Research Pipeline ──────────────────────────────────────
-    g.add_edge("research_retrieval", "evidence_ranking")
-    g.add_edge("evidence_ranking", "context_compression")
+    g.add_edge("research_generation", "evidence_collection")
+    g.add_edge("evidence_collection", "evidence_validation")
+    g.add_edge("evidence_validation", "knowledge_retrieval")
+    g.add_edge("knowledge_retrieval", "context_compression")
     g.add_conditional_edges("context_compression", route_to_ministers)
 
     # ── Collect fan-out results ────────────────────────────────
@@ -169,12 +177,13 @@ def build_graph() -> Any:
     # ── Collect voting fan-out results ─────────────────────────
     g.add_edge("minister_vote", "tally_votes")
 
-    # ── Simulation phase ───────────────────────────────────────
-    g.add_edge("tally_votes", "simulation_phase")
+    # ── Forecasting phase ───────────────────────────────────────
+    g.add_edge("tally_votes", "forecasting")
 
-    # ── PM synthesis & Black Swan ──────────────────────────────
-    g.add_edge("simulation_phase", "prime_minister_synthesis")
-    g.add_edge("prime_minister_synthesis", "black_swan_engine")
+    # ── PM synthesis & Recommendations ─────────────────────────
+    g.add_edge("forecasting", "prime_minister_synthesis")
+    g.add_edge("prime_minister_synthesis", "recommendations")
+    g.add_edge("recommendations", "black_swan_engine")
 
     # ── Final edge: black_swan_engine → END | error ────────────
     g.add_conditional_edges(

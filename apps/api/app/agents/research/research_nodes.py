@@ -18,16 +18,15 @@ logger = structlog.get_logger(__name__)
 
 
 # ══════════════════════════════════════════════════════════════
-# NODE 0A — RESEARCH RETRIEVAL
+# NODE 0A — RESEARCH GENERATION
 # ══════════════════════════════════════════════════════════════
 
-async def node_research_retrieval(state: GovernanceState) -> Dict[str, Any]:
-    """Generates queries and fetches raw evidence from APIs."""
-    logger.info("Research retrieval starting", project_id=state["project_id"])
+async def node_research_generation(state: GovernanceState) -> Dict[str, Any]:
+    """Generates highly optimized search strategies."""
+    logger.info("Research generation starting", project_id=state["project_id"])
     problem = state["problem"]
     context = state.get("context", "")
 
-    # 1. Generate Queries
     llm = ModelOrchestrator.get_model(ModelTask.RESEARCH)
     query_schema = """{
   "queries": ["query 1", "query 2", "query 3"]
@@ -43,9 +42,9 @@ Return ONLY JSON:
 {query_schema}"""
 
     try:
-        resp = await asyncio.wait_for(
-            llm.ainvoke([HumanMessage(content=prompt)]),
-            timeout=settings.AGENT_TIMEOUT_SECONDS
+        resp = await ModelOrchestrator.call_model_with_resilience(
+            ModelTask.RESEARCH,
+            [HumanMessage(content=prompt)]
         )
         parsed = extract_json(str(resp.content))
         queries = parsed.get("queries", [])[:3]
@@ -56,41 +55,40 @@ Return ONLY JSON:
     if not queries:
         queries = ["policy impact", "economic analysis"]
 
-    logger.info("Executing research queries", queries=queries)
-    
-    # 2. Fetch Evidence from APIs
-    raw_results = await ResearchClients.run_parallel_searches(queries)
-    
-    # 3. Retrieve Long-Term Memory (Precedents)
-    precedents = vector_store_manager.search_precedents(problem, top_k=2)
-    for p in precedents:
-        raw_results.append({
-            "source": "TITAN Historical Memory",
-            "title": f"Past Resolution: {p.get('metadata', {}).get('project_id', 'Unknown')}",
-            "snippet": p.get('content', '')
-        })
-    
     return {
         "research_queries": queries,
+        "current_phase": "collecting_evidence"
+    }
+
+# ══════════════════════════════════════════════════════════════
+# NODE 0B — EVIDENCE COLLECTION
+# ══════════════════════════════════════════════════════════════
+
+async def node_evidence_collection(state: GovernanceState) -> Dict[str, Any]:
+    """Fetches raw evidence from external APIs based on queries."""
+    queries = state.get("research_queries", [])
+    logger.info("Executing evidence collection", queries=queries)
+    
+    raw_results = await ResearchClients.run_parallel_searches(queries)
+    
+    return {
         "raw_evidence": raw_results,
         "current_phase": "validating_evidence"
     }
 
-
 # ══════════════════════════════════════════════════════════════
-# NODE 0B — EVIDENCE RANKING & VALIDATION
+# NODE 0C — EVIDENCE VALIDATION
 # ══════════════════════════════════════════════════════════════
 
-async def node_evidence_ranking(state: GovernanceState) -> Dict[str, Any]:
-    """Filters and ranks the raw evidence for relevance to the problem."""
-    logger.info("Evidence ranking starting")
+async def node_evidence_validation(state: GovernanceState) -> Dict[str, Any]:
+    """Filters and ranks the raw evidence, dropping hallucinations/low-quality data."""
+    logger.info("Evidence validation starting")
     problem = state["problem"]
     raw_evidence = state.get("raw_evidence", [])
     
     if not raw_evidence:
-        return {"current_phase": "compressing_context"}
+        return {"validated_evidence": [], "current_phase": "knowledge_retrieval"}
 
-    # Format evidence for the LLM
     evidence_text = ""
     for i, item in enumerate(raw_evidence):
         evidence_text += f"[{i+1}] SOURCE: {item.get('source')} | TITLE: {item.get('title')}\nSNIPPET: {item.get('snippet')}\n\n"
@@ -111,38 +109,58 @@ EVIDENCE:
 Return ONLY JSON:
 {ranking_schema}"""
 
-    llm = ModelOrchestrator.get_model(ModelTask.RESEARCH)
     try:
-        resp = await asyncio.wait_for(
-            llm.ainvoke([HumanMessage(content=prompt)]),
-            timeout=settings.AGENT_TIMEOUT_SECONDS
+        resp = await ModelOrchestrator.call_model_with_resilience(
+            ModelTask.RESEARCH,
+            [HumanMessage(content=prompt)]
         )
         parsed = extract_json(str(resp.content))
         indices = parsed.get("selected_indices", [])
         
-        # Filter raw_evidence based on selected indices (1-based)
         filtered = []
         for idx in indices:
             if isinstance(idx, int) and 1 <= idx <= len(raw_evidence):
                 filtered.append(raw_evidence[idx-1])
                 
-        # Update state with filtered evidence
         return {
-            "raw_evidence": filtered, # Annotated reducer merges, wait... no, we should just compress it.
-            # Actually, since `raw_evidence` is Annotated with operator.add, returning it here will append it again.
-            # So we pass the filtered items directly to context compression via a temporary key or just overwrite.
-            # Wait, TypedDict doesn't easily allow temporary keys unless defined.
-            # Let's just compress it directly in the next node, or do compression here.
+            "validated_evidence": filtered,
+            "current_phase": "knowledge_retrieval"
         }
     except Exception as e:
-        logger.error("Evidence ranking failed", error=str(e))
-        return {}
+        logger.error("Evidence validation failed", error=str(e))
+        return {
+            "validated_evidence": raw_evidence[:3],
+            "current_phase": "knowledge_retrieval"
+        }
+
+# ══════════════════════════════════════════════════════════════
+# NODE 0D — KNOWLEDGE RETRIEVAL
+# ══════════════════════════════════════════════════════════════
+
+async def node_knowledge_retrieval(state: GovernanceState) -> Dict[str, Any]:
+    """Queries Vector DB for precedents and builds final dossier."""
+    problem = state["problem"]
+    validated = state.get("validated_evidence", [])
+    
+    logger.info("Knowledge retrieval starting")
+    
+    # Retrieve Long-Term Memory (Precedents)
+    precedents = vector_store_manager.search_precedents(problem, top_k=2)
+    for p in precedents:
+        validated.append({
+            "source": "TITAN Historical Memory",
+            "title": f"Past Resolution: {p.get('metadata', {}).get('project_id', 'Unknown')}",
+            "snippet": p.get('content', '')
+        })
         
-    return {"current_phase": "compressing_context"}
+    return {
+        "validated_evidence": validated,
+        "current_phase": "compressing_context"
+    }
 
 
 # ══════════════════════════════════════════════════════════════
-# NODE 0C — CONTEXT COMPRESSION
+# NODE 0E — CONTEXT COMPRESSION
 # ══════════════════════════════════════════════════════════════
 
 async def node_context_compression(state: GovernanceState) -> Dict[str, Any]:
@@ -150,12 +168,9 @@ async def node_context_compression(state: GovernanceState) -> Dict[str, Any]:
     logger.info("Context compression starting")
     problem = state["problem"]
     
-    # We will just use the last chunk of raw_evidence since operator.add appends everything.
-    # To avoid issues, let's take all raw_evidence (which includes the ranked ones if we appended them, or just all of them if ranking failed).
-    # Wait, the best way is to combine ranking and compression, but let's keep them separate.
-    raw_evidence = state.get("raw_evidence", [])
+    validated = state.get("validated_evidence", [])
     
-    if not raw_evidence:
+    if not validated:
         dossier = "No external evidence could be retrieved for this problem. Rely on foundational principles."
         return {
             "evidence_dossier": dossier,
@@ -163,27 +178,26 @@ async def node_context_compression(state: GovernanceState) -> Dict[str, Any]:
         }
 
     evidence_text = "\n".join(
-        f"- [{item.get('source')}]: {item.get('title')} ({item.get('date', 'N/A')})\n  {item.get('snippet')}"
-        for item in raw_evidence[-10:] # Take last 10 to avoid token overflow
+        f"- [{item.get('source')}]: {item.get('title')}\n  {item.get('snippet')}"
+        for item in validated[-10:] # Take last 10 to avoid token overflow
     )
 
     prompt = f"""You are the Chief Research Officer for the TITAN Cabinet.
-Synthesize the following raw evidence into a dense, highly factual 'Evidence Dossier'.
+Synthesize the following validated evidence into a dense, highly factual 'Evidence Dossier'.
 Extract every statistic, empirical claim, and historical precedent.
 Do NOT generate opinions. Do NOT solve the problem. Only organize the facts.
 
 PROBLEM: {problem}
 
-RAW EVIDENCE:
+VALIDATED EVIDENCE:
 {evidence_text}
 
 Format the output as a Markdown summary (max 300 words)."""
 
-    llm = ModelOrchestrator.get_model(ModelTask.SUMMARIZATION)
     try:
-        resp = await asyncio.wait_for(
-            llm.ainvoke([HumanMessage(content=prompt)]),
-            timeout=settings.AGENT_TIMEOUT_SECONDS
+        resp = await ModelOrchestrator.call_model_with_resilience(
+            ModelTask.SUMMARIZATION,
+            [HumanMessage(content=prompt)]
         )
         dossier = str(resp.content).strip()
     except Exception as e:

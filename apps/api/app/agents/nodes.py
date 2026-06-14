@@ -414,16 +414,16 @@ async def node_tally_votes(state: GovernanceState) -> Dict[str, Any]:
 
 
 # ══════════════════════════════════════════════════════════════
-# NODE 8.5 — SIMULATION ENGINE
+# NODE 8.5 — FORECASTING ENGINE
 # Simulates the winning option across distinct futures
 # ══════════════════════════════════════════════════════════════
 
-async def node_simulation_phase(state: GovernanceState) -> Dict[str, Any]:
+async def node_forecasting(state: GovernanceState) -> Dict[str, Any]:
     """
-    Runs the future simulation engine on the winning policy option.
+    Runs the future forecasting engine on the winning policy option.
     Generates Future A, B, C, D using ScenarioPlanningAgent and EconomicForecastAgent.
     """
-    logger.info("Simulation phase starting")
+    logger.info("Forecasting phase starting")
     
     winning_option = state.get("metadata", {}).get("winning_option")
     if not winning_option:
@@ -460,9 +460,9 @@ async def node_simulation_phase(state: GovernanceState) -> Dict[str, Any]:
     results = await asyncio.gather(*[run_sim(f) for f in futures], return_exceptions=False)
     sim_results = list(results)
 
-    logger.info("Simulations complete", futures_simulated=len(sim_results))
+    logger.info("Forecasting complete", futures_forecasted=len(sim_results))
     return {
-        "simulation_results": sim_results,
+        "forecasting_results": sim_results,
         "current_phase": "synthesizing",
     }
 
@@ -609,7 +609,7 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
         return {
             "final_report": final,
             "metadata": {**meta, "completed_at": _ts()},
-            "current_phase": "black_swan"
+            "current_phase": "recommending"
         }
 
     except Exception as exc:
@@ -618,6 +618,45 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
             "error": str(exc),
             "current_phase": "failed",
         }
+
+
+# ══════════════════════════════════════════════════════════════
+# NODE 9.5 — RECOMMENDATIONS
+# ══════════════════════════════════════════════════════════════
+
+async def node_recommendations(state: GovernanceState) -> Dict[str, Any]:
+    """
+    Translates the PM's synthesized strategy into actionable, user-facing recommendations.
+    """
+    logger.info("Recommendations phase starting")
+    report = state.get("final_report", {})
+    if not report:
+        return {"current_phase": "black_swan"}
+
+    # In a full implementation, this could use another LLM call to format the report into
+    # a specific user-requested format (e.g. PDF structure, email, executive brief).
+    # For now, we will structure it explicitly from the PM report and validated evidence.
+    
+    validated_evidence = state.get("validated_evidence", [])
+    citations = [
+        {"source": ev.get("source", "Unknown"), "title": ev.get("title", "Unknown")}
+        for ev in validated_evidence[:3]
+    ]
+
+    recommendations = {
+        "title": f"Strategic Directive: {report.get('chosen_option', 'Strategy')}",
+        "executive_summary": report.get("executive_summary", ""),
+        "key_actions": [step.get("actions", []) for step in report.get("implementation_steps", [])],
+        "citations": citations,
+        "confidence_score": report.get("confidence_score", 0),
+        "_timestamp": _ts()
+    }
+
+    logger.info("Recommendations complete")
+    return {
+        "recommendations": recommendations,
+        "current_phase": "black_swan"
+    }
 
 
 # ══════════════════════════════════════════════════════════════

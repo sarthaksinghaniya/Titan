@@ -74,6 +74,7 @@ class GovernanceState(TypedDict):
     # ── Phase 0 : Research & Evidence ───────────────────────────
     research_queries: List[str]
     raw_evidence: Annotated[List[Dict[str, Any]], operator.add]
+    validated_evidence: List[Dict[str, Any]]
     evidence_dossier: str
 
     # ── Phase 1 : Parallel minister analyses ───────────────────
@@ -95,13 +96,16 @@ class GovernanceState(TypedDict):
     policy_options: List[str]        # extracted from debate
     vote_tally: Dict[str, int]       # option -> count
 
-    # ── Phase 5b : Scenario simulations ────────────────────────
-    simulation_results: Optional[List[Dict[str, Any]]]
+    # ── Phase 6 : Forecasting ──────────────────────────────────
+    forecasting_results: Optional[List[Dict[str, Any]]]
 
-    # ── Phase 6 : Prime Minister synthesis ─────────────────────
+    # ── Phase 7 : Prime Minister synthesis ─────────────────────
     final_report: Optional[Dict[str, Any]]
 
-    # ── Phase 7 : Black Swan resilience analysis ────────────────
+    # ── Phase 8 : Final Recommendations ────────────────────────
+    recommendations: Optional[Dict[str, Any]]
+
+    # ── Phase 9 : Black Swan resilience analysis ────────────────
     black_swan_results: Optional[Dict[str, Any]]
 
     # ── Control flow ────────────────────────────────────────────
@@ -116,6 +120,10 @@ def make_initial_state(project_id: str, problem: str, context: str = "") -> Gove
         project_id=project_id,
         problem=problem,
         context=context,
+        research_queries=[],
+        raw_evidence=[],
+        validated_evidence=[],
+        evidence_dossier="",
         analyses=[],
         debate_arguments=[],
         opposition_attacks=[],
@@ -123,10 +131,11 @@ def make_initial_state(project_id: str, problem: str, context: str = "") -> Gove
         votes=[],
         policy_options=[],
         vote_tally={},
-        simulation_results=None,
+        forecasting_results=None,
         final_report=None,
+        recommendations=None,
         black_swan_results=None,
-        current_phase="analyzing",
+        current_phase="researching",
         error=None,
         metadata={},
     )

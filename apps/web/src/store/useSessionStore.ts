@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SessionPhase = 'pending' | 'researching' | 'validating_evidence' | 'compressing_context' | 'analyzing' | 'debating' | 'voting' | 'simulating' | 'synthesizing' | 'black_swan' | 'completed' | 'failed';
+export type SessionPhase = 'pending' | 'researching' | 'collecting_evidence' | 'validating_evidence' | 'knowledge_retrieval' | 'compressing_context' | 'analyzing' | 'debating' | 'voting' | 'forecasting' | 'synthesizing' | 'recommending' | 'black_swan' | 'completed' | 'failed';
 
 export interface StateData {
   projectId: string | null;
@@ -12,6 +12,7 @@ export interface StateData {
   votes: any[];
   simulations: any[];
   finalReport: any | null;
+  recommendations: any | null;
   connected: boolean;
 }
 
@@ -26,6 +27,7 @@ interface SessionStore extends StateData {
   appendVote: (vote: any) => void;
   setSimulations: (simulations: any[]) => void;
   setFinalReport: (report: any) => void;
+  setRecommendations: (recs: any) => void;
   resetSession: () => void;
 }
 
@@ -39,6 +41,7 @@ const initialState: StateData = {
   votes: [],
   simulations: [],
   finalReport: null,
+  recommendations: null,
   connected: false,
 };
 
@@ -64,7 +67,8 @@ export const useSessionStore = create<SessionStore>((set) => ({
   })),
   
   setSimulations: (simulations) => set({ simulations }),
-  setFinalReport: (report) => set({ finalReport: report, phase: 'completed' }),
+  setFinalReport: (report) => set({ finalReport: report }),
+  setRecommendations: (recs) => set({ recommendations: recs, phase: 'completed' }),
   
   resetSession: () => set(initialState),
 }));
