@@ -74,6 +74,16 @@ def _build_llm_pro() -> ChatGoogleGenerativeAI:
     )
 
 
+def _build_llm_flash() -> ChatGoogleGenerativeAI:
+    """Build a fast Gemini Flash LLM instance for lightweight tasks."""
+    return ChatGoogleGenerativeAI(
+        model=settings.GEMINI_FLASH_MODEL,
+        google_api_key=settings.GEMINI_API_KEY,
+        temperature=0.4,
+        max_output_tokens=4096,
+    )
+
+
 # ══════════════════════════════════════════════════════════════
 # NODE 1 — INPUT VALIDATION
 # Entry point: validates problem, initialises metadata
@@ -623,7 +633,6 @@ Return ONLY valid JSON matching this schema:
 {schema}"""
 
     from langchain_core.messages import HumanMessage
-    from app.agents.base import _build_llm_flash
     llm = _build_llm_flash()
     response = await llm.ainvoke([HumanMessage(content=prompt)])
     content = response.content.strip()
