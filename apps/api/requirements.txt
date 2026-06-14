@@ -50,3 +50,4 @@ slowapi
 tenacity
 prometheus-fastapi-instrumentator==7.0.0
 psutil
+cachetools

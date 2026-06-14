@@ -60,6 +60,8 @@ Return ONLY JSON:
         "current_phase": "collecting_evidence"
     }
 
+from app.agents.research.providers.registry import ProviderRegistry
+
 # ══════════════════════════════════════════════════════════════
 # NODE 0B — EVIDENCE COLLECTION
 # ══════════════════════════════════════════════════════════════
@@ -69,7 +71,8 @@ async def node_evidence_collection(state: GovernanceState) -> Dict[str, Any]:
     queries = state.get("research_queries", [])
     logger.info("Executing evidence collection", queries=queries)
     
-    raw_results = await ResearchClients.run_parallel_searches(queries)
+    registry = ProviderRegistry()
+    raw_results = await registry.execute_parallel_search(queries, max_results_per_provider=2)
     
     return {
         "raw_evidence": raw_results,
