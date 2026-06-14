@@ -5,10 +5,11 @@ import structlog
 from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.language_models.chat_models import BaseChatModel
 
 from app.core.config import settings
 from app.agents.ministers.base import extract_json
+from app.agents.orchestrator import ModelOrchestrator, ModelTask
 
 logger = structlog.get_logger(__name__)
 
@@ -58,13 +59,8 @@ Return ONLY valid JSON:
   "key_benefits": ["<benefit1>", "<benefit2>"]
 }"""
 
-    def _get_llm(self) -> ChatGoogleGenerativeAI:
-        return ChatGoogleGenerativeAI(
-            model=settings.GEMINI_FLASH_MODEL,
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=0.7, # slightly higher temp for diverse futures
-            max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
-        )
+    def _get_llm(self) -> BaseChatModel:
+        return ModelOrchestrator.get_model(ModelTask.FORECASTING)
 
     async def simulate(self, problem: str, option_name: str, future_designation: str) -> Dict[str, Any]:
         """Run a simulation for a specific policy option and future designation (A/B/C/D)."""

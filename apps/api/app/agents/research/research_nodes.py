@@ -8,9 +8,10 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.agents.state import GovernanceState
 from app.core.config import settings
-from app.agents.nodes import _build_llm_flash, _build_llm_pro, _ts
+from app.agents.nodes import _ts
 from app.agents.ministers.base import extract_json
 from app.agents.research.research_clients import ResearchClients
+from app.agents.orchestrator import ModelOrchestrator, ModelTask
 
 logger = structlog.get_logger(__name__)
 
@@ -26,7 +27,7 @@ async def node_research_retrieval(state: GovernanceState) -> Dict[str, Any]:
     context = state.get("context", "")
 
     # 1. Generate Queries
-    llm = _build_llm_flash()
+    llm = ModelOrchestrator.get_model(ModelTask.RESEARCH)
     query_schema = """{
   "queries": ["query 1", "query 2", "query 3"]
 }"""
@@ -100,7 +101,7 @@ EVIDENCE:
 Return ONLY JSON:
 {ranking_schema}"""
 
-    llm = _build_llm_flash()
+    llm = ModelOrchestrator.get_model(ModelTask.RESEARCH)
     try:
         resp = await asyncio.wait_for(
             llm.ainvoke([HumanMessage(content=prompt)]),
@@ -168,7 +169,7 @@ RAW EVIDENCE:
 
 Format the output as a Markdown summary (max 300 words)."""
 
-    llm = _build_llm_pro() # Use Pro for high quality synthesis
+    llm = ModelOrchestrator.get_model(ModelTask.SUMMARIZATION)
     try:
         resp = await asyncio.wait_for(
             llm.ainvoke([HumanMessage(content=prompt)]),

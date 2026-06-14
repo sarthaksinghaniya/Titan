@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     GEMINI_TEMPERATURE: float = 0.7
     GEMINI_MAX_OUTPUT_TOKENS: int = 4096
 
+    # ─── Multi-Model Providers ────────────────────────────────
+    OPENAI_API_KEY: str = ""
+    OPENAI_DEFAULT_MODEL: str = "gpt-4o"
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_DEFAULT_MODEL: str = "claude-3-5-sonnet-20240620"
+    HUGGINGFACE_API_KEY: str = ""
+
     # ─── Agent Settings ───────────────────────────────────────
     DEBATE_ROUNDS: int = 2
     MAX_SIMULATION_OPTIONS: int = 3

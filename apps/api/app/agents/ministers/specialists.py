@@ -4,10 +4,12 @@ from typing import Any, Dict, List, Optional
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.core.config import settings
 from app.agents.ministers.base import extract_json
+from app.agents.orchestrator import ModelOrchestrator, ModelTask
 
 logger = structlog.get_logger(__name__)
 
@@ -17,20 +19,9 @@ class SpecialistAgent:
     title: str = ""
     model_tier: str = "flash"
     
-    def _get_llm(self) -> ChatGoogleGenerativeAI:
-        if self.model_tier == "pro":
-            return ChatGoogleGenerativeAI(
-                model=settings.GEMINI_PRO_MODEL,
-                google_api_key=settings.GEMINI_API_KEY,
-                temperature=0.4,
-                max_output_tokens=8192,
-            )
-        return ChatGoogleGenerativeAI(
-            model=settings.GEMINI_FLASH_MODEL,
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=settings.GEMINI_TEMPERATURE,
-            max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
-        )
+    def _get_llm(self) -> BaseChatModel:
+        # Default for base specialist, overridden or parameterized by subclasses
+        return ModelOrchestrator.get_model(ModelTask.RESEARCH)
 
 
 class FactCheckerAgent(SpecialistAgent):
@@ -54,7 +45,7 @@ class FactCheckerAgent(SpecialistAgent):
 
     async def audit_analyses(self, problem: str, all_analyses: List[Dict[str, Any]], evidence_dossier: str) -> Dict[str, Any]:
         """Runs after the initial analysis fan-out to flag hallucinations."""
-        llm = self._get_llm()
+        llm = ModelOrchestrator.get_model(ModelTask.VALIDATION)
         analyses_ctx = "\n\n".join(
             f"[{a.get('role_title', a.get('agent_role', '?'))}]\n"
             f"Assessment: {a.get('situation_assessment', '')}\n"
@@ -105,7 +96,7 @@ class RiskAgent(SpecialistAgent):
 }"""
 
     async def generate_black_swan(self, policy: str) -> Dict[str, Any]:
-        llm = self._get_llm()
+        llm = ModelOrchestrator.get_model(ModelTask.FORECASTING)
         sys_prompt = """You are the Risk Agent (formerly Black Swan Engine).
 Your job is to invent a highly disruptive, low-probability 'Tail Risk' or 'Black Swan' event 
 that perfectly exploits the weaknesses in the provided policy.
@@ -135,7 +126,7 @@ class EconomicForecastAgent(SpecialistAgent):
 }"""
 
     async def forecast(self, option: str) -> Dict[str, Any]:
-        llm = self._get_llm()
+        llm = ModelOrchestrator.get_model(ModelTask.FORECASTING)
         sys_prompt = "You are the Economic Forecast Agent. Quantitatively model the fiscal impact of this policy option."
         user_msg = f"OPTION: {option}\n\nReturn JSON:\n{self.SCHEMA}"
         try:
@@ -163,7 +154,7 @@ class ScenarioPlanningAgent(SpecialistAgent):
 }"""
 
     async def plan_scenario(self, option: str, future_context: str) -> Dict[str, Any]:
-        llm = self._get_llm()
+        llm = ModelOrchestrator.get_model(ModelTask.FORECASTING)
         sys_prompt = f"You are the Scenario Planning Agent. Evaluate this policy under the '{future_context}' future scenario."
         user_msg = f"OPTION: {option}\n\nReturn JSON:\n{self.SCHEMA}"
         try:

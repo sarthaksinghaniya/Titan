@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.core.config import settings
@@ -133,20 +134,11 @@ Return ONLY a valid JSON object:
   "veto_options": ["<options you actively oppose and why — format: option: reason>"]
 }"""
 
-    def _get_llm(self) -> ChatGoogleGenerativeAI:
-        if self.model_tier == "pro":
-            return ChatGoogleGenerativeAI(
-                model=settings.GEMINI_PRO_MODEL,
-                google_api_key=settings.GEMINI_API_KEY,
-                temperature=0.4,
-                max_output_tokens=8192,
-            )
-        return ChatGoogleGenerativeAI(
-            model=settings.GEMINI_FLASH_MODEL,
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=settings.GEMINI_TEMPERATURE,
-            max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
-        )
+    def _get_llm(self) -> BaseChatModel:
+        # We will determine the task based on context, but default to DEBATE
+        # so ministers get reasoning models.
+        from app.agents.orchestrator import ModelOrchestrator, ModelTask
+        return ModelOrchestrator.get_model(ModelTask.DEBATE)
 
     async def analyze(self, problem: str, context: str = "", evidence_dossier: str = "") -> Dict[str, Any]:
         """Phase 1 — independent analysis. Returns MinisterOutput dict."""

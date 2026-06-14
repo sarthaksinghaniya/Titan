@@ -54,6 +54,7 @@ from app.agents.ministers import CABINET, PRIME_MINISTER, MINISTER_REGISTRY, SIM
 from app.agents.ministers.specialists import FactCheckerAgent, RiskAgent, EconomicForecastAgent, ScenarioPlanningAgent
 from app.core.config import settings
 from app.services.event_bus import EventBus
+from app.agents.orchestrator import ModelOrchestrator, ModelTask
 
 logger = structlog.get_logger(__name__)
 
@@ -64,25 +65,6 @@ logger = structlog.get_logger(__name__)
 
 def _ts() -> str:
     return datetime.now(tz=timezone.utc).isoformat()
-
-
-def _build_llm_pro() -> ChatGoogleGenerativeAI:
-    return ChatGoogleGenerativeAI(
-        model=settings.GEMINI_PRO_MODEL,
-        google_api_key=settings.GEMINI_API_KEY,
-        temperature=0.4,
-        max_output_tokens=8192,
-    )
-
-
-def _build_llm_flash() -> ChatGoogleGenerativeAI:
-    """Build a fast Gemini Flash LLM instance for lightweight tasks."""
-    return ChatGoogleGenerativeAI(
-        model=settings.GEMINI_FLASH_MODEL,
-        google_api_key=settings.GEMINI_API_KEY,
-        temperature=0.4,
-        max_output_tokens=4096,
-    )
 
 
 # ══════════════════════════════════════════════════════════════
@@ -607,7 +589,7 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
     from app.agents.ministers.base import extract_json
     from langchain_core.messages import HumanMessage, SystemMessage
 
-    llm = _build_llm_pro()
+    llm = ModelOrchestrator.get_model(ModelTask.DEBATE)
     try:
         resp = await asyncio.wait_for(
             llm.ainvoke([
