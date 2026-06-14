@@ -105,6 +105,7 @@ class GovernanceState(TypedDict):
 
     # ── Phase 8 : Final Recommendations ────────────────────────
     recommendations: Optional[Dict[str, Any]]
+    executive_reports: Optional[List[Dict[str, Any]]]
 
     # ── Phase 9 : Black Swan resilience analysis ────────────────
     black_swan_results: Optional[Dict[str, Any]]
@@ -135,6 +136,7 @@ def make_initial_state(project_id: str, problem: str, context: str = "") -> Gove
         forecasting_results=None,
         final_report=None,
         recommendations=None,
+        executive_reports=None,
         black_swan_results=None,
         current_phase="researching",
         error=None,

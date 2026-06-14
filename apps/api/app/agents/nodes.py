@@ -621,42 +621,31 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
 # NODE 9.5 — RECOMMENDATIONS
 # ══════════════════════════════════════════════════════════════
 
+from app.agents.ministers.specialists import ExecutiveReportingAgent
+
 async def node_recommendations(state: GovernanceState) -> Dict[str, Any]:
     """
-    Translates the PM's synthesized strategy into actionable, user-facing recommendations.
+    Translates the PM's synthesized strategy into actionable, user-facing executive reports.
+    Generates 4 audience-specific reports: Government, Enterprise, Investors, Universities.
     """
     logger.info("Recommendations phase starting")
     report = state.get("final_report", {})
     if not report:
         return {"current_phase": "black_swan"}
 
-    # In a full implementation, this could use another LLM call to format the report into
-    # a specific user-requested format (e.g. PDF structure, email, executive brief).
-    # For now, we will structure it explicitly from the PM report and validated evidence.
+    evidence = state.get("evidence_dossier", "")
+    forecasting = state.get("forecasting_results", [])
     
-    precedents = state.get("precedents", [])
-    citations = []
-    for p in precedents[:3]:
-        meta = p.get("metadata", {})
-        citations.append({
-            "source": meta.get("source", "Historical Memory"),
-            "title": meta.get("title", "Precedent"),
-            "url": meta.get("url", ""),
-            "confidence_score": p.get("composite_confidence", meta.get("base_confidence", 50.0))
-        })
+    agent = ExecutiveReportingAgent()
+    audiences = ["Government", "Enterprise", "Investors", "Universities"]
+    
+    reports = await asyncio.gather(
+        *(agent.generate_report(report, evidence, forecasting, audience) for audience in audiences)
+    )
 
-    recommendations = {
-        "title": f"Strategic Directive: {report.get('chosen_option', 'Strategy')}",
-        "executive_summary": report.get("executive_summary", ""),
-        "key_actions": [step.get("actions", []) for step in report.get("implementation_steps", [])],
-        "citations": citations,
-        "confidence_score": report.get("confidence_score", 0),
-        "_timestamp": _ts()
-    }
-
-    logger.info("Recommendations complete")
+    logger.info("Executive Reporting complete", reports_generated=len(reports))
     return {
-        "recommendations": recommendations,
+        "executive_reports": list(reports),
         "current_phase": "black_swan"
     }
 

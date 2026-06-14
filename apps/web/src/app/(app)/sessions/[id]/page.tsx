@@ -114,6 +114,9 @@ export default function SessionDetailRouter() {
               resilience_score: reportData.final_report.resilience_score
             });
           }
+          if (reportData.executive_reports) {
+            setExecutiveReports(reportData.executive_reports);
+          }
           
           router.push('/report');
         } else if (session.status === 'failed') {

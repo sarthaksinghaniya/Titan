@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 from typing import Any, Dict, List, Optional
 
@@ -146,3 +147,48 @@ Be highly analytical and realistic."""
         except Exception as e:
             logger.error("Forecasting failed", error=str(e))
             return {}
+
+
+class ExecutiveReportingAgent(SpecialistAgent):
+    role = "executive_reporting_agent"
+    title = "Executive Intelligence Reporting"
+    
+    SCHEMA = """
+{
+  "audience": "<audience>",
+  "executive_summary": "<summary>",
+  "key_findings": ["<finding 1>"],
+  "evidence_table": [
+    {"claim": "<claim>", "source": "<source>", "confidence": 95}
+  ],
+  "risks": ["<risk>"],
+  "opportunities": ["<opportunity>"],
+  "recommendations": ["<recommendation>"],
+  "confidence_score": 90
+}"""
+
+    async def generate_report(self, final_report: Dict[str, Any], evidence_dossier: str, forecasting_results: List[Dict[str, Any]], audience: str) -> Dict[str, Any]:
+        sys_prompt = f"""You are the TITAN Executive Reporting Agent.
+Your task is to synthesize the finalized policy strategy, evidence dossier, and forecasting results into a highly professional intelligence report specifically tailored for the '{audience}' audience.
+The tone should perfectly match what {audience} executives expect.
+"""
+        
+        context_payload = {
+            "final_report": final_report,
+            "evidence": evidence_dossier[:2000], # truncating for context window safety
+            "forecasting": forecasting_results
+        }
+        
+        user_msg = f"CONTEXT:\n{json.dumps(context_payload, indent=2)}\n\nGenerate the intelligence report for {audience}.\nReturn ONLY JSON:\n{self.SCHEMA}"
+        
+        try:
+            resp = await ModelOrchestrator.call_model_with_resilience(
+                ModelTask.SYNTHESIS,
+                [SystemMessage(content=sys_prompt), HumanMessage(content=user_msg)]
+            )
+            result = extract_json(str(resp.content))
+            result["audience"] = audience
+            return result
+        except Exception as e:
+            logger.error(f"Reporting failed for {audience}", error=str(e))
+            return {"audience": audience, "error": "Synthesis failed"}

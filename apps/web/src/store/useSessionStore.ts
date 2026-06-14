@@ -13,6 +13,7 @@ export interface StateData {
   simulations: any[];
   finalReport: any | null;
   recommendations: any | null;
+  executiveReports: any[] | null;
   factCheckReport: any | null;
   connected: boolean;
 }
@@ -29,6 +30,7 @@ interface SessionStore extends StateData {
   setSimulations: (simulations: any[]) => void;
   setFinalReport: (report: any) => void;
   setRecommendations: (recs: any) => void;
+  setExecutiveReports: (reports: any[]) => void;
   setFactCheckReport: (report: any) => void;
   resetSession: () => void;
 }
@@ -44,6 +46,7 @@ const initialState: StateData = {
   simulations: [],
   finalReport: null,
   recommendations: null,
+  executiveReports: null,
   factCheckReport: null,
   connected: false,
 };
@@ -72,6 +75,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   setSimulations: (simulations) => set({ simulations }),
   setFinalReport: (report) => set({ finalReport: report }),
   setRecommendations: (recs) => set({ recommendations: recs, phase: 'completed' }),
+  setExecutiveReports: (reports) => set({ executiveReports: reports }),
   setFactCheckReport: (report) => set({ factCheckReport: report }),
   
   resetSession: () => set(initialState),
