@@ -12,6 +12,7 @@ from app.agents.nodes import _ts
 from app.agents.ministers.base import extract_json
 from app.agents.research.research_clients import ResearchClients
 from app.agents.orchestrator import ModelOrchestrator, ModelTask
+from app.services.vector_store import vector_store_manager
 
 logger = structlog.get_logger(__name__)
 
@@ -57,8 +58,17 @@ Return ONLY JSON:
 
     logger.info("Executing research queries", queries=queries)
     
-    # 2. Fetch Evidence
+    # 2. Fetch Evidence from APIs
     raw_results = await ResearchClients.run_parallel_searches(queries)
+    
+    # 3. Retrieve Long-Term Memory (Precedents)
+    precedents = vector_store_manager.search_precedents(problem, top_k=2)
+    for p in precedents:
+        raw_results.append({
+            "source": "TITAN Historical Memory",
+            "title": f"Past Resolution: {p.get('metadata', {}).get('project_id', 'Unknown')}",
+            "snippet": p.get('content', '')
+        })
     
     return {
         "research_queries": queries,

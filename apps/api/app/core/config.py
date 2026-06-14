@@ -42,6 +42,14 @@ class Settings(BaseSettings):
     ANTHROPIC_DEFAULT_MODEL: str = "claude-3-5-sonnet-20240620"
     HUGGINGFACE_API_KEY: str = ""
 
+    # ─── Vector Database ──────────────────────────────────────
+    VECTOR_STORE_PROVIDER: str = "chroma" # chroma, qdrant, pinecone
+    CHROMA_PERSIST_DIR: str = "./chroma_db"
+    QDRANT_URL: str = ""
+    QDRANT_API_KEY: str = ""
+    PINECONE_API_KEY: str = ""
+    PINECONE_INDEX_NAME: str = "titan"
+
     # ─── Agent Settings ───────────────────────────────────────
     DEBATE_ROUNDS: int = 2
     MAX_SIMULATION_OPTIONS: int = 3
