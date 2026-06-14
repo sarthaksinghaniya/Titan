@@ -113,55 +113,36 @@ Do not be generic. Be surgical."""
             return {}
 
 
-class EconomicForecastAgent(SpecialistAgent):
-    role = "economic_forecast_agent"
-    title = "Economic Forecaster"
+class ForecastingAgent(SpecialistAgent):
+    role = "forecasting_agent"
+    title = "Forecasting Engine"
     
     SCHEMA = """
 {
-  "economic_score": <0-100>,
-  "cost_estimate_usd_millions": <integer>,
-  "projected_population_impact": <float millions>,
-  "fiscal_analysis": "<Brief economic impact summary>"
-}"""
-
-    async def forecast(self, option: str) -> Dict[str, Any]:
-        llm = ModelOrchestrator.get_model(ModelTask.FORECASTING)
-        sys_prompt = "You are the Economic Forecast Agent. Quantitatively model the fiscal impact of this policy option."
-        user_msg = f"OPTION: {option}\n\nReturn JSON:\n{self.SCHEMA}"
-        try:
-            resp = await asyncio.wait_for(
-                llm.ainvoke([SystemMessage(content=sys_prompt), HumanMessage(content=user_msg)]),
-                timeout=settings.AGENT_TIMEOUT_SECONDS
-            )
-            return extract_json(str(resp.content))
-        except Exception:
-            return {}
-
-
-class ScenarioPlanningAgent(SpecialistAgent):
-    role = "scenario_planning_agent"
-    title = "Scenario Planner"
-    
-    SCHEMA = """
-{
-  "social_score": <0-100>,
-  "environmental_score": <0-100>,
-  "feasibility_score": <0-100>,
-  "risk_level": "<low|medium|high|critical>",
+  "scenario": "<scenario name>",
+  "economic_score": 50,
+  "infrastructure_score": 50,
+  "technology_score": 50,
+  "environmental_score": 50,
+  "social_score": 50,
+  "risk_level": "low|medium|high|critical",
   "key_risks": ["<risk 1>"],
   "key_benefits": ["<benefit 1>"]
 }"""
 
-    async def plan_scenario(self, option: str, future_context: str) -> Dict[str, Any]:
-        llm = ModelOrchestrator.get_model(ModelTask.FORECASTING)
-        sys_prompt = f"You are the Scenario Planning Agent. Evaluate this policy under the '{future_context}' future scenario."
-        user_msg = f"OPTION: {option}\n\nReturn JSON:\n{self.SCHEMA}"
+    async def forecast_scenario(self, option: str, scenario: str) -> Dict[str, Any]:
+        sys_prompt = f"""You are the TITAN Forecasting Engine. 
+Evaluate the following policy option under the '{scenario}' scenario.
+Score the predicted impact (0-100) across 5 domains: Economic, Infrastructure, Technology, Environmental, and Social.
+Be highly analytical and realistic."""
+        user_msg = f"POLICY OPTION: {option}\n\nReturn ONLY JSON:\n{self.SCHEMA}"
+        
         try:
-            resp = await asyncio.wait_for(
-                llm.ainvoke([SystemMessage(content=sys_prompt), HumanMessage(content=user_msg)]),
-                timeout=settings.AGENT_TIMEOUT_SECONDS
+            resp = await ModelOrchestrator.call_model_with_resilience(
+                ModelTask.FORECASTING,
+                [SystemMessage(content=sys_prompt), HumanMessage(content=user_msg)]
             )
             return extract_json(str(resp.content))
-        except Exception:
+        except Exception as e:
+            logger.error("Forecasting failed", error=str(e))
             return {}

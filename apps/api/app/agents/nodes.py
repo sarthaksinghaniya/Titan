@@ -419,10 +419,12 @@ async def node_tally_votes(state: GovernanceState) -> Dict[str, Any]:
 # Simulates the winning option across distinct futures
 # ══════════════════════════════════════════════════════════════
 
+from app.agents.ministers.specialists import ForecastingAgent
+
 async def node_forecasting(state: GovernanceState) -> Dict[str, Any]:
     """
     Runs the future forecasting engine on the winning policy option.
-    Generates Future A, B, C, D using ScenarioPlanningAgent and EconomicForecastAgent.
+    Generates Best Case, Expected Case, Worst Case using ForecastingAgent.
     """
     logger.info("Forecasting phase starting")
     
@@ -431,34 +433,28 @@ async def node_forecasting(state: GovernanceState) -> Dict[str, Any]:
         options = state.get("policy_options", [])
         winning_option = options[0] if options else "Option 1"
 
-    futures = ["Future A (Optimistic)", "Future B (Pessimistic)", "Future C (Tech-Driven)", "Future D (Resource-Constrained)"]
-    
-    scenario_agent = ScenarioPlanningAgent()
-    econ_agent = EconomicForecastAgent()
+    scenarios = ["Best Case", "Expected Case", "Worst Case"]
+    forecasting_agent = ForecastingAgent()
 
-    # Economic forecast is constant for the option
-    econ_forecast = await econ_agent.forecast(winning_option)
-    econ_score = econ_forecast.get("economic_score", 50)
-
-    async def run_sim(future_name: str):
-        result = await scenario_agent.plan_scenario(winning_option, future_name)
-        result["economic_score"] = econ_score # Inject econ forecast
-        result["future_name"] = future_name
+    async def run_sim(scenario_name: str):
+        result = await forecasting_agent.forecast_scenario(winning_option, scenario_name)
+        result["future_name"] = scenario_name
         result["option_name"] = winning_option
         
-        # Calculate composite
+        # Calculate composite across the 5 domains
         scores = [
             result.get("economic_score", 50),
+            result.get("infrastructure_score", 50),
+            result.get("technology_score", 50),
             result.get("environmental_score", 50),
-            result.get("social_score", 50),
-            result.get("feasibility_score", 50)
+            result.get("social_score", 50)
         ]
-        result["composite_score"] = round(sum(scores) / 4.0, 1)
+        result["composite_score"] = round(sum(scores) / 5.0, 1)
         result["_timestamp"] = _ts()
         return result
 
-    # Run the 4 futures in parallel
-    results = await asyncio.gather(*[run_sim(f) for f in futures], return_exceptions=False)
+    # Run the scenarios in parallel
+    results = await asyncio.gather(*[run_sim(f) for f in scenarios], return_exceptions=False)
     sim_results = list(results)
 
     logger.info("Forecasting complete", futures_forecasted=len(sim_results))

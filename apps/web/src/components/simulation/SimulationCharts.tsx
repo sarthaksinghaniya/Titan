@@ -38,18 +38,21 @@ export function SimulationCharts() {
 
   // Format data for Radar Chart
   const radarData = [
-    { subject: 'Economic', A: 0, B: 0, C: 0, D: 0, fullMark: 100 },
-    { subject: 'Environment', A: 0, B: 0, C: 0, D: 0, fullMark: 100 },
-    { subject: 'Social', A: 0, B: 0, C: 0, D: 0, fullMark: 100 },
-    { subject: 'Feasibility', A: 0, B: 0, C: 0, D: 0, fullMark: 100 },
+    { subject: 'Economic', A: 0, B: 0, C: 0, fullMark: 100 },
+    { subject: 'Infrastructure', A: 0, B: 0, C: 0, fullMark: 100 },
+    { subject: 'Technology', A: 0, B: 0, C: 0, fullMark: 100 },
+    { subject: 'Environment', A: 0, B: 0, C: 0, fullMark: 100 },
+    { subject: 'Social', A: 0, B: 0, C: 0, fullMark: 100 },
   ];
 
   simulations.forEach((sim, idx) => {
-    const key = ['A', 'B', 'C', 'D'][idx] as 'A' | 'B' | 'C' | 'D';
-    radarData[0][key] = sim.economic_score;
-    radarData[1][key] = sim.environmental_score;
-    radarData[2][key] = sim.social_score;
-    radarData[3][key] = sim.feasibility_score;
+    const key = ['A', 'B', 'C'][idx] as 'A' | 'B' | 'C';
+    if (!key) return; // safety
+    radarData[0][key] = sim.economic_score || 0;
+    radarData[1][key] = sim.infrastructure_score || 0;
+    radarData[2][key] = sim.technology_score || 0;
+    radarData[3][key] = sim.environmental_score || 0;
+    radarData[4][key] = sim.social_score || 0;
   });
 
   return (
@@ -59,18 +62,18 @@ export function SimulationCharts() {
         animate={{ opacity: 1, scale: 1 }}
         className="titan-card p-6 h-[500px]"
       >
-        <h3 className="text-lg font-bold text-white mb-6">Multi-Dimensional Impact Analysis</h3>
+        <h3 className="text-lg font-bold text-white mb-6">Multi-Dimensional Scenario Analysis</h3>
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="45%" outerRadius="70%" data={radarData}>
             <PolarGrid stroke="rgba(255,255,255,0.1)" />
             <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 12 }} />
             <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
             
-            {simulations.map((sim, idx) => (
+            {simulations.slice(0, 3).map((sim, idx) => (
               <Radar
-                key={sim.option_description}
-                name={sim.option_description}
-                dataKey={['A', 'B', 'C', 'D'][idx]}
+                key={sim.future_name || `Scenario ${idx}`}
+                name={sim.future_name || `Scenario ${idx}`}
+                dataKey={['A', 'B', 'C'][idx]}
                 stroke={COLORS[idx % COLORS.length]}
                 fill={COLORS[idx % COLORS.length]}
                 fillOpacity={0.3}
@@ -96,7 +99,7 @@ export function SimulationCharts() {
           >
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis 
-              dataKey="option_description" 
+              dataKey="future_name" 
               tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 12 }} 
               axisLine={false}
               tickLine={false}
@@ -122,20 +125,20 @@ export function SimulationCharts() {
       </motion.div>
       
       {/* Detailed Future Cards */}
-      <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
-        {simulations.map((sim, idx) => (
+      <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        {simulations.slice(0, 3).map((sim, idx) => (
           <motion.div
-            key={sim.id}
+            key={sim.id || idx}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 + (idx * 0.1) }}
             className="titan-surface-2 p-5 rounded-xl border border-titan-border relative overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-            <h4 className="font-bold text-white mb-1">{sim.option_description}</h4>
+            <h4 className="font-bold text-white mb-1">{sim.future_name || sim.option_description}</h4>
             <div className="flex items-center justify-between mb-4">
               <span className="text-2xl font-black" style={{ color: COLORS[idx % COLORS.length] }}>
-                {sim.composite_score.toFixed(1)}
+                {sim.composite_score?.toFixed(1) || 0}
               </span>
               <span className={`text-[10px] font-mono px-2 py-1 rounded uppercase ${
                 sim.risk_level === 'low' ? 'bg-green-500/20 text-green-400' :
@@ -149,11 +152,11 @@ export function SimulationCharts() {
             <div className="space-y-3">
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-titan-text-muted block mb-1">Key Risk</span>
-                <p className="text-xs text-titan-text-secondary">{sim.key_risks[0] || 'N/A'}</p>
+                <p className="text-xs text-titan-text-secondary">{sim.key_risks?.[0] || 'N/A'}</p>
               </div>
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-titan-text-muted block mb-1">Key Benefit</span>
-                <p className="text-xs text-titan-text-secondary">{sim.key_benefits[0] || 'N/A'}</p>
+                <p className="text-xs text-titan-text-secondary">{sim.key_benefits?.[0] || 'N/A'}</p>
               </div>
             </div>
           </motion.div>

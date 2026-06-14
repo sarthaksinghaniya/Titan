@@ -82,12 +82,13 @@ export default function SessionDetailRouter() {
           }
           if (reportData.simulations) {
             const mappedSims = reportData.simulations.map((s: any) => ({
-              future_name: s.option_description || s.option_name,
+              future_name: s.future_name || s.option_description || s.option_name,
               option_name: s.option_name,
               economic_score: s.economic_score,
-              environment_score: s.environmental_score,
+              infrastructure_score: s.infrastructure_score,
+              technology_score: s.technology_score,
+              environmental_score: s.environmental_score,
               social_score: s.social_score,
-              feasibility_score: s.feasibility_score,
               composite_score: s.composite_score,
               risk_level: s.risk_level,
               key_risks: s.key_risks,
@@ -209,12 +210,13 @@ export default function SessionDetailRouter() {
             }
             if (reportData.simulations) {
               const mappedSims = reportData.simulations.map((s: any) => ({
-                future_name: s.option_description || s.option_name,
+                future_name: s.future_name || s.option_description || s.option_name,
                 option_name: s.option_name,
                 economic_score: s.economic_score,
-                environment_score: s.environmental_score,
+                infrastructure_score: s.infrastructure_score,
+                technology_score: s.technology_score,
+                environmental_score: s.environmental_score,
                 social_score: s.social_score,
-                feasibility_score: s.feasibility_score,
                 composite_score: s.composite_score,
                 risk_level: s.risk_level,
                 key_risks: s.key_risks,
