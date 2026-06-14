@@ -91,6 +91,11 @@ from app.agents.nodes import (
     route_to_voting,
     route_after_synthesis,
 )
+from app.agents.research.research_nodes import (
+    node_research_retrieval,
+    node_evidence_ranking,
+    node_context_compression,
+)
 
 
 def time_node(func):
@@ -115,6 +120,9 @@ def build_graph() -> Any:
 
     # ── Register all nodes ─────────────────────────────────────
     g.add_node("input_validation",         time_node(node_input_validation))
+    g.add_node("research_retrieval",       time_node(node_research_retrieval))
+    g.add_node("evidence_ranking",         time_node(node_evidence_ranking))
+    g.add_node("context_compression",      time_node(node_context_compression))
     g.add_node("minister_analysis",        time_node(node_minister_analysis))   # fan-out target
     g.add_node("aggregate_analyses",       time_node(node_aggregate_analyses))
     g.add_node("debate_round",             time_node(node_debate_round))
@@ -135,6 +143,11 @@ def build_graph() -> Any:
         "input_validation",
         route_after_validation,
     )
+
+    # ── Research Pipeline ──────────────────────────────────────
+    g.add_edge("research_retrieval", "evidence_ranking")
+    g.add_edge("evidence_ranking", "context_compression")
+    g.add_conditional_edges("context_compression", route_to_ministers)
 
     # ── Collect fan-out results ────────────────────────────────
     g.add_edge("minister_analysis", "aggregate_analyses")

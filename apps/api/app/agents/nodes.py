@@ -100,7 +100,7 @@ async def node_input_validation(state: GovernanceState) -> Dict[str, Any]:
 
     logger.info("Input validated", project_id=state["project_id"], length=len(problem))
     return {
-        "current_phase": "analyzing",
+        "current_phase": "researching",
         "metadata": {
             "started_at": _ts(),
             "problem_length": len(problem),
@@ -123,6 +123,7 @@ async def node_minister_analysis(payload: Dict[str, Any]) -> Dict[str, Any]:
     role    = payload["role"]
     problem = payload["problem"]
     context = payload.get("context", "")
+    evidence_dossier = payload.get("evidence_dossier", "")
 
     minister = MINISTER_REGISTRY.get(role)
     if not minister:
@@ -130,7 +131,7 @@ async def node_minister_analysis(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"analyses": []}
 
     logger.info("Minister analyzing", role=role)
-    result = await minister.analyze(problem, context)
+    result = await minister.analyze(problem, context, evidence_dossier)
     result["_timestamp"] = _ts()
     
     # Also record this as a 'presentation' phase debate argument for the history
@@ -167,6 +168,7 @@ def route_to_ministers(state: GovernanceState) -> List[Send]:
             "project_id": state["project_id"],
             "problem":    state["problem"],
             "context":    state.get("context", ""),
+            "evidence_dossier": state.get("evidence_dossier", ""),
             "role":       minister.role,
         })
         for minister in CABINET
@@ -693,10 +695,10 @@ async def node_error_handler(state: GovernanceState) -> Dict[str, Any]:
 # ══════════════════════════════════════════════════════════════
 
 def route_after_validation(state: GovernanceState) -> str | List[Send]:
-    """After validation: proceed to parallel analysis or fail."""
+    """After validation: proceed to research retrieval or fail."""
     if state.get("error") or state.get("current_phase") == "failed":
         return "error_handler"
-    return route_to_ministers(state)
+    return "research_retrieval"
 
 
 def route_after_synthesis(state: GovernanceState) -> str:

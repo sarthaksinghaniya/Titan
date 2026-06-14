@@ -48,6 +48,9 @@ export function Badge({
 // ─── Status Badge ─────────────────────────────────────────────
 const STATUS_CONFIG: Record<SessionStatus, { label: string; variant: BadgeProps["variant"]; pulse: boolean }> = {
   pending: { label: "Pending", variant: "default", pulse: false },
+  researching: { label: "Researching", variant: "warning", pulse: true },
+  validating_evidence: { label: "Validating Evidence", variant: "warning", pulse: true },
+  compressing_context: { label: "Synthesizing Evidence", variant: "info", pulse: true },
   analyzing: { label: "Analyzing", variant: "info", pulse: true },
   debating: { label: "Debating", variant: "warning", pulse: true },
   voting: { label: "Voting", variant: "minister", pulse: true },

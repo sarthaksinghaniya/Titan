@@ -65,6 +65,11 @@ class GovernanceState(TypedDict):
     problem: str
     context: str
 
+    # ── Phase 0 : Research & Evidence ───────────────────────────
+    research_queries: List[str]
+    raw_evidence: Annotated[List[Dict[str, Any]], operator.add]
+    evidence_dossier: str
+
     # ── Phase 1 : Parallel minister analyses ───────────────────
     analyses: Annotated[List[MinisterOutput], operator.add]
 

@@ -9,9 +9,12 @@ export function WorkflowGraph() {
   const { phase } = useSessionStore();
 
   // Helper to determine if a node is "active" or "completed" based on the current phase
+  const isResearching = ['researching', 'validating_evidence', 'compressing_context'].includes(phase);
+  const effectivePhase = isResearching ? 'analyzing' : phase;
+
   const getStatus = (nodePhase: string) => {
     const order = ['pending', 'analyzing', 'debating', 'voting', 'simulating', 'synthesizing', 'completed'];
-    const currentIndex = order.indexOf(phase);
+    const currentIndex = order.indexOf(effectivePhase);
     const nodeIndex = order.indexOf(nodePhase);
     
     // Problem is always first

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SessionPhase = 'pending' | 'analyzing' | 'debating' | 'voting' | 'simulating' | 'synthesizing' | 'black_swan' | 'completed' | 'failed';
+export type SessionPhase = 'pending' | 'researching' | 'validating_evidence' | 'compressing_context' | 'analyzing' | 'debating' | 'voting' | 'simulating' | 'synthesizing' | 'black_swan' | 'completed' | 'failed';
 
 export interface StateData {
   projectId: string | null;

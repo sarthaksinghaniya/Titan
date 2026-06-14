@@ -142,16 +142,19 @@ Return ONLY a valid JSON object:
             max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
         )
 
-    async def analyze(self, problem: str, context: str = "") -> Dict[str, Any]:
+    async def analyze(self, problem: str, context: str = "", evidence_dossier: str = "") -> Dict[str, Any]:
         """Phase 1 — independent analysis. Returns MinisterOutput dict."""
         llm = self._get_llm()
         goals_block = "\n".join(f"  - {g}" for g in self.goals)
         constraints_block = "\n".join(f"  - {c}" for c in self.constraints)
 
+        evidence_block = f"\nEVIDENCE DOSSIER:\n{evidence_dossier}\n\nCRITICAL RULE: You MUST ground your key findings and proposed solutions in the provided Evidence Dossier. Do NOT invent statistics or cite nonexistent studies." if evidence_dossier else ""
+
         user_msg = f"""PROBLEM SUBMITTED TO CABINET:
 {problem}
 
 {f"ADDITIONAL CONTEXT: {context}" if context else ""}
+{evidence_block}
 
 YOUR GOALS:
 {goals_block}

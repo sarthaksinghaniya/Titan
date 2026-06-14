@@ -17,6 +17,9 @@ export type MinisterRole =
 
 export type SessionStatus =
   | "pending"
+  | "researching"
+  | "validating_evidence"
+  | "compressing_context"
   | "analyzing"
   | "debating"
   | "voting"
