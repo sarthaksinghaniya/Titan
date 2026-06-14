@@ -132,29 +132,45 @@ async def get_project_report(
     )
 
 
-# ─── SSE Stream ───────────────────────────────────────────────
+# ─── SSE Stream ────────────────────────────────────────────────
 @router.get("/sessions/{project_id}/stream", tags=["projects"])
 async def stream_project(project_id: str) -> StreamingResponse:
     """
     Server-Sent Events stream for real-time agent activity.
     Connect from the frontend to receive live updates.
+
+    Connection lifecycle:
+    1. Browser connects → immediately receives an initial heartbeat.
+    2. Events are forwarded as they arrive from the event_bus queue.
+    3. The stream exits cleanly when the server sends a sentinel via
+       close_session() (after session_complete or error event).
+    4. If the browser disconnects early, asyncio.CancelledError propagates
+       through event_bus.subscribe(), which cleans up the queue.
     """
     async def event_generator() -> AsyncGenerator[str, None]:
-        # Send heartbeat immediately on connect
-        yield f"data: {json.dumps({'event': 'heartbeat', 'data': {'project_id': project_id}, 'timestamp': ''})}\n\n"
-
-        async for event in event_bus.subscribe(project_id):
-            yield f"data: {json.dumps(event)}\n\n"
-            if event.get("event") in ("session_complete", "error"):
-                break
+        # Immediate heartbeat confirms connection to the browser.
+        yield (
+            f"data: {json.dumps({'event': 'heartbeat', 'data': {'project_id': project_id}, 'timestamp': ''})}\n\n"
+        )
+        try:
+            async for event in event_bus.subscribe(project_id):
+                yield f"data: {json.dumps(event)}\n\n"
+                # Do NOT break on session_complete/error here.
+                # close_session() sends the sentinel which causes
+                # event_bus.subscribe() to return naturally, ending this loop.
+        except GeneratorExit:
+            # Browser closed the connection mid-stream.
+            # asyncio.CancelledError is already handled inside subscribe().
+            logger.info("SSE client disconnected", project_id=project_id)
 
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
+            "X-Accel-Buffering": "no",      # Disable nginx buffering
             "Connection": "keep-alive",
+            "Content-Type": "text/event-stream; charset=utf-8",
         },
     )
 

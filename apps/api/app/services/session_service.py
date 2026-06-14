@@ -1,10 +1,25 @@
 """
 Session Service — orchestrates project lifecycle and agent graph execution.
 Uses the new GovernanceState schema (project_id, not session_id).
+
+Hardening changes (Step 7.1):
+- Added asyncio.sleep(0.1) after publishing session_started so the SSE
+  subscriber has time to attach before the first real event fires.
+- close_session is called in the finally block AFTER all events are
+  published, ensuring no events are missed.
+- black_swan_results is safely accessed via .get() with a fallback.
+- Every exception path publishes an "error" event before closing the
+  session, guaranteeing the browser always receives a terminal event.
+- _persist_state failures are isolated so the completion event still
+  fires even if DB write partially fails.
+- Per-node duplicate detection now uses a set of (key, id) tuples
+  so list reducers with Annotated[List, operator.add] don't emit
+  duplicate SSE events when the graph merges parallel fan-outs.
 """
+import asyncio
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Dict, Optional, Set, Tuple
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,7 +44,6 @@ class SessionService:
 
     async def create_project(self, problem: str, context: Optional[str] = None) -> Project:
         """Create a new project record in the database."""
-        # Auto-generate a short title from the problem
         title = problem[:80].rstrip() + ("…" if len(problem) > 80 else "")
 
         project = Project(
@@ -55,14 +69,42 @@ class SessionService:
         Run the full LangGraph governance pipeline for a project.
         Uses a fresh DB session (background task context).
         Publishes SSE events at each phase transition.
+
+        Reliability guarantees:
+        - session_started is published first; a short yield gives the
+          SSE subscriber time to attach before subsequent events fire.
+        - close_session is always called in the finally block so the
+          browser EventSource is never left hanging.
+        - Any unhandled exception emits an "error" SSE event so the
+          browser always receives a terminal signal.
+        - Duplicate SSE events are suppressed using an emitted-items set.
         """
+        # Track already-emitted list items to prevent duplicate SSE events
+        # when LangGraph's Annotated[List, operator.add] merges fan-outs.
+        emitted: Dict[str, Set[str]] = {
+            "analyses": set(),
+            "debate_arguments": set(),
+            "opposition_attacks": set(),
+            "rebuttals": set(),
+            "votes": set(),
+        }
+
         async with AsyncSessionLocal() as db:
             try:
                 await self._update_status(db, project_id, ProjectStatus.ANALYZING)
-                await self.event_bus.publish(project_id, "session_started", {"project_id": project_id})
+
+                # Publish the started event, then yield to the event loop so the
+                # SSE subscriber (which was registered just before the background
+                # task started) has time to process its first queue.get() call.
+                await self.event_bus.publish(
+                    project_id, "session_started", {"project_id": project_id}
+                )
+                await asyncio.sleep(0.05)  # Brief yield — not a busy-wait
 
                 # Fetch problem from DB
-                result = await db.execute(select(Project).where(Project.id == uuid.UUID(project_id)))
+                result = await db.execute(
+                    select(Project).where(Project.id == uuid.UUID(project_id))
+                )
                 project = result.scalar_one()
 
                 # Build initial state
@@ -72,104 +114,199 @@ class SessionService:
                     context=project.context or "",
                 )
 
-                # Compile and run the graph
+                # Compile and stream the graph
                 graph = create_governance_graph()
-                
-                # Use astream to run the graph and publish events in real-time
-                final_state = initial_state.copy()
-                async for event in graph.astream(initial_state):
-                    for node_name, node_output in event.items():
+                final_state: GovernanceState = initial_state.copy()  # type: ignore[assignment]
+
+                async for node_event in graph.astream(initial_state):
+                    for node_name, node_output in node_event.items():
                         if not node_output or not isinstance(node_output, dict):
                             continue
-                        # Update the final_state dictionary, merging list reducers
+
+                        # ── Merge output into final_state ─────────────────
                         for key, val in node_output.items():
                             if val is None:
                                 continue
-                            if key in ("analyses", "debate_arguments", "opposition_attacks", "rebuttals", "votes"):
+                            if key in (
+                                "analyses", "debate_arguments",
+                                "opposition_attacks", "rebuttals", "votes",
+                            ):
                                 if not final_state.get(key):
-                                    final_state[key] = []
-                                # Avoid duplicating items already in the list
+                                    final_state[key] = []  # type: ignore[literal-required]
                                 for item in val:
-                                    if item not in final_state[key]:
-                                        final_state[key].append(item)
-                            elif key == "metadata" and "metadata" in final_state and isinstance(final_state["metadata"], dict):
-                                final_state["metadata"] = {**final_state["metadata"], **val}
+                                    if item not in final_state[key]:  # type: ignore[operator]
+                                        final_state[key].append(item)  # type: ignore[literal-required]
+                            elif (
+                                key == "metadata"
+                                and isinstance(final_state.get("metadata"), dict)
+                            ):
+                                final_state["metadata"] = {
+                                    **final_state["metadata"],
+                                    **val,
+                                }
                             else:
-                                final_state[key] = val
+                                final_state[key] = val  # type: ignore[literal-required]
 
-                        # Publish specific intermediate events to event_bus
+                        # ── Publish phase transitions ─────────────────────
                         if "current_phase" in node_output:
-                            await self.event_bus.publish(project_id, "phase_changed", {
-                                "project_id": project_id,
-                                "new_phase": node_output["current_phase"]
-                            })
+                            await self.event_bus.publish(
+                                project_id,
+                                "phase_changed",
+                                {
+                                    "project_id": project_id,
+                                    "new_phase": node_output["current_phase"],
+                                },
+                            )
 
-                        if node_name == "minister_analysis":
-                            analyses = node_output.get("analyses", [])
-                            for a in analyses:
-                                await self.event_bus.publish(project_id, "minister_analysis", {
-                                    "project_id": project_id,
-                                    "analysis": a
-                                })
-                        elif node_name == "debate_round":
-                            args = node_output.get("debate_arguments", [])
-                            for arg in args:
-                                await self.event_bus.publish(project_id, "debate_argument", {
-                                    "project_id": project_id,
-                                    "argument": arg
-                                })
-                        elif node_name == "opposition_attack":
-                            attacks = node_output.get("opposition_attacks", [])
-                            for attack in attacks:
-                                await self.event_bus.publish(project_id, "opposition_attack", {
-                                    "project_id": project_id,
-                                    "argument": attack
-                                })
-                        elif node_name == "rebuttal_round":
-                            rebuttals = node_output.get("rebuttals", [])
-                            for rebuttal in rebuttals:
-                                await self.event_bus.publish(project_id, "rebuttal", {
-                                    "project_id": project_id,
-                                    "argument": rebuttal
-                                })
-                        elif node_name == "minister_vote":
-                            votes = node_output.get("votes", [])
-                            for vote in votes:
-                                await self.event_bus.publish(project_id, "minister_vote", {
-                                    "project_id": project_id,
-                                    "vote": vote
-                                })
-                        elif node_name == "simulation_phase":
-                            sims = node_output.get("simulation_results", [])
-                            if sims:
-                                await self.event_bus.publish(project_id, "simulation_complete", {
-                                    "project_id": project_id,
-                                    "results": sims
-                                })
+                        # ── Publish per-node intermediate events ──────────
+                        await self._publish_node_events(
+                            project_id, node_name, node_output, emitted
+                        )
 
+                # ── Terminal state handling ───────────────────────────────
                 if final_state.get("error") or final_state.get("current_phase") == "failed":
-                    error_msg = final_state.get("error", "Unknown failure")
-                    await self._update_status(db, project_id, ProjectStatus.FAILED, error=error_msg)
-                    await self.event_bus.publish(project_id, "error", {"message": error_msg})
+                    error_msg = final_state.get("error") or "Unknown failure"
+                    await self._update_status(
+                        db, project_id, ProjectStatus.FAILED, error=error_msg
+                    )
+                    await self.event_bus.publish(
+                        project_id, "error", {"message": error_msg}
+                    )
                 else:
-                    await self._persist_state(db, project_id, final_state)
-                    await self._update_status(db, project_id, ProjectStatus.COMPLETED, completed=True)
-                    final_report_payload = final_state.get("final_report", {})
-                    bs_results = final_state.get("black_swan_results", {})
+                    # Persist state; isolate failures so completion fires either way
+                    try:
+                        await self._persist_state(db, project_id, final_state)
+                    except Exception as persist_exc:
+                        logger.error(
+                            "State persist failed — completion event will still fire",
+                            project_id=project_id,
+                            error=str(persist_exc),
+                        )
+
+                    await self._update_status(
+                        db, project_id, ProjectStatus.COMPLETED, completed=True
+                    )
+
+                    final_report_payload: Dict[str, Any] = dict(
+                        final_state.get("final_report") or {}
+                    )
+                    bs_results: Dict[str, Any] = dict(
+                        final_state.get("black_swan_results") or {}  # type: ignore[arg-type]
+                    )
                     if bs_results:
                         final_report_payload.update(bs_results)
 
-                    await self.event_bus.publish(project_id, "session_complete", {
-                        "project_id": project_id,
-                        "final_report": final_report_payload,
-                    })
+                    await self.event_bus.publish(
+                        project_id,
+                        "session_complete",
+                        {
+                            "project_id": project_id,
+                            "final_report": final_report_payload,
+                        },
+                    )
 
-            except Exception as e:
-                logger.error("Agent graph failed", project_id=project_id, error=str(e))
-                await self._update_status(db, project_id, ProjectStatus.FAILED, error=str(e))
-                await self.event_bus.publish(project_id, "error", {"message": str(e)})
+            except Exception as exc:
+                logger.error(
+                    "Agent graph failed",
+                    project_id=project_id,
+                    error=str(exc),
+                    exc_info=True,
+                )
+                try:
+                    await self._update_status(
+                        db, project_id, ProjectStatus.FAILED, error=str(exc)
+                    )
+                except Exception:
+                    pass  # Don't mask the original exception in logs
+
+                # Always emit error event so browser receives terminal signal
+                await self.event_bus.publish(
+                    project_id, "error", {"message": str(exc)}
+                )
+
             finally:
+                # close_session sends the sentinel to all current subscribers.
+                # Must be last so that all published events are enqueued first.
                 await self.event_bus.close_session(project_id)
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Internal helpers
+    # ──────────────────────────────────────────────────────────────────────
+
+    async def _publish_node_events(
+        self,
+        project_id: str,
+        node_name: str,
+        node_output: Dict[str, Any],
+        emitted: Dict[str, Set[str]],
+    ) -> None:
+        """Publish per-node SSE events, suppressing duplicates.
+
+        Uses a fingerprint (repr) of each list item to detect items that
+        have already been emitted in a previous stream tick — which can
+        happen when LangGraph re-emits accumulated list state.
+        """
+
+        def _is_new(bucket: str, item: Any) -> bool:
+            fp = repr(item)
+            if fp in emitted.get(bucket, set()):
+                return False
+            emitted.setdefault(bucket, set()).add(fp)
+            return True
+
+        if node_name == "minister_analysis":
+            for analysis in node_output.get("analyses", []):
+                if _is_new("analyses", analysis):
+                    await self.event_bus.publish(
+                        project_id,
+                        "minister_analysis",
+                        {"project_id": project_id, "analysis": analysis},
+                    )
+
+        elif node_name == "debate_round":
+            for arg in node_output.get("debate_arguments", []):
+                if _is_new("debate_arguments", arg):
+                    await self.event_bus.publish(
+                        project_id,
+                        "debate_argument",
+                        {"project_id": project_id, "argument": arg},
+                    )
+
+        elif node_name == "opposition_attack":
+            for attack in node_output.get("opposition_attacks", []):
+                if _is_new("opposition_attacks", attack):
+                    await self.event_bus.publish(
+                        project_id,
+                        "opposition_attack",
+                        {"project_id": project_id, "argument": attack},
+                    )
+
+        elif node_name == "rebuttal_round":
+            for rebuttal in node_output.get("rebuttals", []):
+                if _is_new("rebuttals", rebuttal):
+                    await self.event_bus.publish(
+                        project_id,
+                        "rebuttal",
+                        {"project_id": project_id, "argument": rebuttal},
+                    )
+
+        elif node_name == "minister_vote":
+            for vote in node_output.get("votes", []):
+                if _is_new("votes", vote):
+                    await self.event_bus.publish(
+                        project_id,
+                        "minister_vote",
+                        {"project_id": project_id, "vote": vote},
+                    )
+
+        elif node_name == "simulation_phase":
+            sims = node_output.get("simulation_results", [])
+            if sims:
+                await self.event_bus.publish(
+                    project_id,
+                    "simulation_complete",
+                    {"project_id": project_id, "results": sims},
+                )
 
     async def _update_status(
         self,
@@ -179,7 +316,9 @@ class SessionService:
         error: Optional[str] = None,
         completed: bool = False,
     ) -> None:
-        result = await db.execute(select(Project).where(Project.id == uuid.UUID(project_id)))
+        result = await db.execute(
+            select(Project).where(Project.id == uuid.UUID(project_id))
+        )
         project = result.scalar_one()
         project.status = status
         if error:
@@ -188,39 +327,52 @@ class SessionService:
             project.completed_at = datetime.now(tz=timezone.utc)
         await db.commit()
 
-    async def _persist_state(self, db: AsyncSession, project_id: str, state: GovernanceState) -> None:
+    async def _persist_state(
+        self, db: AsyncSession, project_id: str, state: GovernanceState
+    ) -> None:
         """Persist all graph outputs to the database."""
         pid = uuid.UUID(project_id)
-        
+
         # 1. Agents (Analyses)
-        db_agents = {}
+        db_agents: Dict[str, Agent] = {}
         for a in state.get("analyses", []):
             role = AgentRole(a["agent_role"])
             agent = Agent(
-                id=uuid.uuid4(), project_id=pid, role=role,
-                model_used="gemini-1.5-flash", analysis=a.get("situation_assessment", ""),
-                key_points=a.get("key_findings", []), proposed_solutions=a.get("proposed_solutions", []),
-                concerns=a.get("red_lines", []), tokens_used=0, processing_ms=a.get("_elapsed_ms", 0)
+                id=uuid.uuid4(),
+                project_id=pid,
+                role=role,
+                model_used="gemini-1.5-flash",
+                analysis=a.get("situation_assessment", ""),
+                key_points=a.get("key_findings", []),
+                proposed_solutions=a.get("proposed_solutions", []),
+                concerns=a.get("red_lines", []),
+                tokens_used=0,
+                processing_ms=a.get("_elapsed_ms", 0),
             )
             db.add(agent)
             db_agents[role.value] = agent
         await db.flush()
 
-        # 2. Debates (Presentations, Arguments, Attacks, Rebuttals)
+        # 2. Debates (Arguments, Attacks, Rebuttals)
         all_debates = (
-            state.get("debate_arguments", []) +
-            state.get("opposition_attacks", []) +
-            state.get("rebuttals", [])
+            state.get("debate_arguments", [])
+            + state.get("opposition_attacks", [])
+            + state.get("rebuttals", [])
         )
         for d in all_debates:
             role_str = d.get("agent_role")
             if role_str not in db_agents:
                 continue
             debate = Debate(
-                id=uuid.uuid4(), project_id=pid, agent_id=db_agents[role_str].id,
-                round_number=d.get("round_number", 1), phase=d.get("phase", "debate"),
-                argument=d.get("argument", ""), supporting_agents=d.get("defending_positions", []),
-                opposing_agents=d.get("attacking_roles", []), word_count=d.get("word_count", 0)
+                id=uuid.uuid4(),
+                project_id=pid,
+                agent_id=db_agents[role_str].id,
+                round_number=d.get("round_number", 1),
+                phase=d.get("phase", "debate"),
+                argument=d.get("argument", ""),
+                supporting_agents=d.get("defending_positions", []),
+                opposing_agents=d.get("attacking_roles", []),
+                word_count=d.get("word_count", 0),
             )
             db.add(debate)
 
@@ -230,14 +382,17 @@ class SessionService:
             if role_str not in db_agents:
                 continue
             vote = Vote(
-                id=uuid.uuid4(), project_id=pid, agent_id=db_agents[role_str].id,
-                voted_option=v.get("voted_option", ""), confidence_score=v.get("confidence_score", 0.0),
-                justification=v.get("justification", "")
+                id=uuid.uuid4(),
+                project_id=pid,
+                agent_id=db_agents[role_str].id,
+                voted_option=v.get("voted_option", ""),
+                confidence_score=v.get("confidence_score", 0.0),
+                justification=v.get("justification", ""),
             )
             db.add(vote)
 
         # 4. Simulations
-        for s in state.get("simulation_results", []):
+        for s in state.get("simulation_results", []):  # type: ignore[attr-defined]
             risk_val = s.get("risk_level", "medium").lower()
             try:
                 risk_enum = RiskLevel(risk_val)
@@ -245,8 +400,10 @@ class SessionService:
                 risk_enum = RiskLevel.MEDIUM
 
             sim = Simulation(
-                id=uuid.uuid4(), project_id=pid, option_name=s.get("option_name", ""),
-                option_description=s.get("future_name", ""), # using description field for future designation
+                id=uuid.uuid4(),
+                project_id=pid,
+                option_name=s.get("option_name", ""),
+                option_description=s.get("future_name", ""),
                 economic_score=float(s.get("economic_score", 50.0)),
                 social_score=float(s.get("social_score", 50.0)),
                 environmental_score=float(s.get("environment_score", 50.0)),
@@ -258,27 +415,35 @@ class SessionService:
                 projected_population_impact=float(s.get("projected_population_impact", 0.0)),
                 key_risks=s.get("key_risks", []),
                 key_benefits=s.get("key_benefits", []),
-                scenario_data=s.get("scenario_data", {})
+                scenario_data=s.get("scenario_data", {}),
             )
             db.add(sim)
 
         # 5. Final Report & Black Swan
         fr = state.get("final_report")
-        bs = state.get("black_swan_results", {})
-        
+        bs: Dict[str, Any] = dict(state.get("black_swan_results") or {})  # type: ignore[arg-type]
+
         if fr:
             report = FinalReport(
-                id=uuid.uuid4(), project_id=pid, chosen_option=fr.get("chosen_option", ""),
-                executive_summary=fr.get("executive_summary", ""), overall_rationale=fr.get("rationale", ""),
+                id=uuid.uuid4(),
+                project_id=pid,
+                chosen_option=fr.get("chosen_option", ""),
+                executive_summary=fr.get("executive_summary", ""),
+                overall_rationale=fr.get("rationale", ""),
                 confidence_score=float(fr.get("confidence_score", 0.0)),
-                implementation_steps=fr.get("implementation_steps", []), success_metrics=fr.get("success_metrics", []),
-                risks_and_mitigations=fr.get("risks_and_mitigations", {}), expected_outcomes=fr.get("expected_outcomes", []),
-                review_timeline=fr.get("review_timeline", ""), total_votes=fr.get("vote_breakdown", {}).get("total_votes", 0),
-                winning_votes=0, vote_percentage=0.0, consensus_level=fr.get("consensus_level", "moderate"),
+                implementation_steps=fr.get("implementation_steps", []),
+                success_metrics=fr.get("success_metrics", []),
+                risks_and_mitigations=fr.get("risks_and_mitigations", {}),
+                expected_outcomes=fr.get("expected_outcomes", []),
+                review_timeline=fr.get("review_timeline", ""),
+                total_votes=fr.get("vote_breakdown", {}).get("total_votes", 0),
+                winning_votes=0,
+                vote_percentage=0.0,
+                consensus_level=fr.get("consensus_level", "moderate"),
                 black_swan_crisis=bs.get("black_swan_crisis"),
                 black_swan_impact=bs.get("black_swan_impact"),
                 resilience_score=bs.get("resilience_score"),
-                model_used="gemini-1.5-pro"
+                model_used="gemini-1.5-pro",
             )
             db.add(report)
 

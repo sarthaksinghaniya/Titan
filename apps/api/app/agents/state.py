@@ -84,8 +84,14 @@ class GovernanceState(TypedDict):
     policy_options: List[str]        # extracted from debate
     vote_tally: Dict[str, int]       # option -> count
 
+    # ── Phase 5b : Scenario simulations ────────────────────────
+    simulation_results: Optional[List[Dict[str, Any]]]
+
     # ── Phase 6 : Prime Minister synthesis ─────────────────────
     final_report: Optional[Dict[str, Any]]
+
+    # ── Phase 7 : Black Swan resilience analysis ────────────────
+    black_swan_results: Optional[Dict[str, Any]]
 
     # ── Control flow ────────────────────────────────────────────
     current_phase: str
@@ -106,7 +112,9 @@ def make_initial_state(project_id: str, problem: str, context: str = "") -> Gove
         votes=[],
         policy_options=[],
         vote_tally={},
+        simulation_results=None,
         final_report=None,
+        black_swan_results=None,
         current_phase="analyzing",
         error=None,
         metadata={},
