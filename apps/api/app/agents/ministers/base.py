@@ -102,8 +102,7 @@ Return ONLY a valid JSON object — no markdown, no explanation before or after:
   "evidence_score": <0-100 integer>,
   "cited_sources": ["<source 1>", "<source 2>"],
   "assumptions_challenged": ["<assumption 1>", "<assumption 2>"],
-  "priority_score": <0-100 integer>,
-  "confidence": <0-100 integer>
+  "priority_score": <0-100 integer>
 }"""
 
     DEBATE_SCHEMA = """
@@ -119,7 +118,6 @@ Return ONLY a valid JSON object:
   "new_evidence": ["<new data or reasoning you introduce>"],
   "contradictions_detected": ["<contradiction 1>", "<contradiction 2>"],
   "cited_sources": ["<source 1>", "<source 2>"],
-  "confidence_score": <0-100 integer>,
   "word_count": <integer>
 }"""
 
@@ -128,7 +126,6 @@ Return ONLY a valid JSON object:
 {
   "agent_role": "<your role key>",
   "voted_option": "<exact option name from the list>",
-  "confidence_score": <0-100 integer>,
   "justification": "<2-3 sentences explaining your vote>",
   "second_choice": "<your fallback option>",
   "veto_options": ["<options you actively oppose and why — format: option: reason>"]
@@ -178,6 +175,13 @@ Analyze this problem from your ministerial perspective.
             result.setdefault("agent_role", self.role)
             result.setdefault("role_title", self.title)
             result["_elapsed_ms"] = elapsed_ms
+            
+            # Deterministic Confidence Calculation
+            findings_score = min(len(result.get("key_findings", [])), 3) / 3.0 * 35.0
+            solutions_score = min(len(result.get("proposed_solutions", [])), 2) / 2.0 * 35.0
+            sources_score = min(len(result.get("cited_sources", [])), 2) / 2.0 * 30.0
+            result["confidence"] = round(findings_score + solutions_score + sources_score)
+            
             return result
         except Exception as exc:
             logger.error("Minister analysis error", role=self.role, error=str(exc))
@@ -239,7 +243,22 @@ You are in ROUND {round_number} — PHASE: {phase.upper()}.
             result.setdefault("agent_role", self.role)
             result.setdefault("round_number", round_number)
             result.setdefault("phase", phase)
-            result.setdefault("word_count", len(result.get("argument", "").split()))
+            word_count = len(result.get("argument", "").split())
+            result.setdefault("word_count", word_count)
+            
+            # Deterministic Confidence Calculation
+            length_score = min(word_count, 150) / 150.0 * 40.0
+            evidence_score = min(len(result.get("new_evidence", [])), 2) / 2.0 * 30.0
+            sources_score = min(len(result.get("cited_sources", [])), 2) / 2.0 * 30.0
+            
+            penalty = 0
+            if fact_check_report:
+                for c in fact_check_report.get("contradictions_detected", []):
+                    if isinstance(c, dict) and c.get("minister") == self.role:
+                        penalty += 20
+            
+            result["confidence_score"] = max(0, round(length_score + evidence_score + sources_score - penalty))
+            
             return result
         except Exception as exc:
             logger.error("Minister debate error", role=self.role, phase=phase, error=str(exc))
@@ -286,9 +305,15 @@ Your constraints: {'; '.join(self.constraints[:2])}
             result = extract_json(str(resp.content))
             result.setdefault("agent_role", self.role)
             result.setdefault("voted_option", policy_options[0] if policy_options else "Option 1")
-            result.setdefault("confidence_score", 65.0)
             result.setdefault("second_choice", policy_options[1] if len(policy_options) > 1 else "")
             result.setdefault("veto_options", [])
+            
+            # Deterministic Confidence Calculation
+            just_len = len(result.get("justification", "").split())
+            just_score = min(just_len, 50) / 50.0 * 50.0
+            veto_score = min(len(result.get("veto_options", [])), 2) / 2.0 * 50.0
+            result["confidence_score"] = round(just_score + veto_score)
+            
             return result
         except Exception as exc:
             logger.error("Minister vote error", role=self.role, error=str(exc))

@@ -533,7 +533,6 @@ async def node_prime_minister_synthesis(state: GovernanceState) -> Dict[str, Any
   "executive_summary": "<2-3 sentence plain-language summary of the final decision>",
   "chosen_option": "<exact option name>",
   "rationale": "<your detailed reasoning for selecting this strategy, citing debate and simulation results>",
-  "confidence_score": <1-100 float representing your confidence in this decision>,
   "implementation_steps": [
     {
       "phase": "Phase 1 — Foundation",
@@ -585,7 +584,6 @@ You must generate:
 1. Reasoning (rationale)
 2. Risk analysis (risks_and_mitigations)
 3. Expected impact (expected_outcomes)
-4. Confidence score (confidence_score)
 
 Return ONLY this JSON (no markdown fences, no text outside the JSON):
 {pm_schema}"""
@@ -608,6 +606,16 @@ Return ONLY this JSON (no markdown fences, no text outside the JSON):
         final.setdefault("chosen_option", meta.get("winning_option", options[0] if options else ""))
         final.setdefault("consensus_level", meta.get("consensus_level", "moderate"))
         final.setdefault("vote_breakdown", tally)
+        
+        # Deterministic PM Confidence Calculation
+        vote_pct = meta.get("vote_percentage", 50.0)
+        avg_vote_conf = sum(v.get("confidence_score", 50) for v in votes) / max(1, len(votes))
+        avg_sim_score = sum(s.get("composite_score", 50) for s in simulations) / max(1, len(simulations))
+        
+        # Formula: 40% Vote Consensus, 30% Avg Minister Confidence, 30% Average Simulation Score
+        pm_conf = (vote_pct * 0.4) + (avg_vote_conf * 0.3) + (avg_sim_score * 0.3)
+        final["confidence_score"] = round(pm_conf, 1)
+        
         final["_timestamp"] = _ts()
 
         logger.info("Prime Minister synthesis complete", option=final.get("chosen_option"))
