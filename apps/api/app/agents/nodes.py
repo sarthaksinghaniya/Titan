@@ -486,7 +486,7 @@ async def node_prime_minister_synthesis(state: GovernanceState) -> Dict[str, Any
         + state.get("opposition_attacks", [])
         + state.get("rebuttals", [])
     )
-    simulations = state.get("simulation_results", [])
+    simulations = state.get("forecasting_results", [])
     votes     = state.get("votes", [])
     tally     = state.get("vote_tally", {})
     options   = state.get("policy_options", [])
@@ -512,7 +512,7 @@ async def node_prime_minister_synthesis(state: GovernanceState) -> Dict[str, Any
     
     simulations_block = "\n".join(
         f"[{s.get('future_name', 'Future')}]: Option '{s.get('option_name','')}' "
-        f"scored {s.get('composite_score',0)}/100 (Econ: {s.get('economic_score',0)}, Env: {s.get('environment_score',0)}, Social: {s.get('social_score',0)}, Feasibility: {s.get('feasibility_score',0)}). "
+        f"scored {s.get('composite_score',0)}/100 (Econ: {s.get('economic_score',0)}, Env: {s.get('environmental_score',0)}, Social: {s.get('social_score',0)}, Tech: {s.get('technology_score',0)}, Infra: {s.get('infrastructure_score',0)}). "
         f"Risk Level: {s.get('risk_level','')}"
         for s in simulations
     )
