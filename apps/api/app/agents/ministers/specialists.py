@@ -153,33 +153,72 @@ class ExecutiveReportingAgent(SpecialistAgent):
     role = "executive_reporting_agent"
     title = "Executive Intelligence Reporting"
     
-    SCHEMA = """
-{
-  "audience": "<audience>",
+    # Distinct logic dictionaries for audiences
+    AUDIENCE_CONFIGS = {
+        "Government": {
+            "prompt": "You are the TITAN Executive Reporting Agent for Government. Focus strictly on policy implications, legislative changes, national security, and public sentiment.",
+            "schema": """{
+  "audience": "Government",
   "executive_summary": "<summary>",
-  "key_findings": ["<finding 1>"],
-  "evidence_table": [
-    {"claim": "<claim>", "source": "<source>", "confidence": 95}
-  ],
-  "risks": ["<risk>"],
-  "opportunities": ["<opportunity>"],
-  "recommendations": ["<recommendation>"],
+  "policy_implications": ["<policy 1>"],
+  "legislative_requirements": ["<req 1>"],
+  "public_sentiment_risk": "<risk assessment>",
+  "evidence_table": [ {"claim": "<claim>", "source": "<source>", "confidence": 95} ],
   "confidence_score": 90
 }"""
+        },
+        "Enterprise": {
+            "prompt": "You are the TITAN Executive Reporting Agent for Enterprise. Focus strictly on market impact, compliance costs, competitive advantages, and ROI implications.",
+            "schema": """{
+  "audience": "Enterprise",
+  "executive_summary": "<summary>",
+  "market_impact": ["<impact 1>"],
+  "compliance_costs": ["<cost 1>"],
+  "competitive_advantages": ["<advantage 1>"],
+  "roi_forecast": "<roi assessment>",
+  "evidence_table": [ {"claim": "<claim>", "source": "<source>", "confidence": 95} ],
+  "confidence_score": 90
+}"""
+        },
+        "Investors": {
+            "prompt": "You are the TITAN Executive Reporting Agent for Investors. Focus strictly on capital allocation, systemic market risks, startup opportunities, and yield curves.",
+            "schema": """{
+  "audience": "Investors",
+  "executive_summary": "<summary>",
+  "market_risks": ["<risk 1>"],
+  "startup_opportunities": ["<opp 1>"],
+  "capital_allocation_strategy": "<strategy>",
+  "yield_forecast": "<forecast>",
+  "evidence_table": [ {"claim": "<claim>", "source": "<source>", "confidence": 95} ],
+  "confidence_score": 90
+}"""
+        },
+        "Universities": {
+            "prompt": "You are the TITAN Executive Reporting Agent for Universities. Focus strictly on academic implications, research funding opportunities, theoretical shifts, and peer review needs.",
+            "schema": """{
+  "audience": "Universities",
+  "executive_summary": "<summary>",
+  "research_opportunities": ["<research 1>"],
+  "theoretical_shifts": ["<shift 1>"],
+  "grant_funding_areas": ["<funding 1>"],
+  "evidence_table": [ {"claim": "<claim>", "source": "<source>", "confidence": 95} ],
+  "confidence_score": 90
+}"""
+        }
+    }
 
     async def generate_report(self, final_report: Dict[str, Any], evidence_dossier: str, forecasting_results: List[Dict[str, Any]], audience: str) -> Dict[str, Any]:
-        sys_prompt = f"""You are the TITAN Executive Reporting Agent.
-Your task is to synthesize the finalized policy strategy, evidence dossier, and forecasting results into a highly professional intelligence report specifically tailored for the '{audience}' audience.
-The tone should perfectly match what {audience} executives expect.
-"""
+        config = self.AUDIENCE_CONFIGS.get(audience, self.AUDIENCE_CONFIGS["Government"])
+        sys_prompt = config["prompt"]
+        schema = config["schema"]
         
         context_payload = {
             "final_report": final_report,
-            "evidence": evidence_dossier[:2000], # truncating for context window safety
+            "evidence": evidence_dossier[:2000],
             "forecasting": forecasting_results
         }
         
-        user_msg = f"CONTEXT:\n{json.dumps(context_payload, indent=2)}\n\nGenerate the intelligence report for {audience}.\nReturn ONLY JSON:\n{self.SCHEMA}"
+        user_msg = f"CONTEXT:\n{json.dumps(context_payload, indent=2)}\n\nGenerate the intelligence report for {audience}.\nReturn ONLY JSON:\n{schema}"
         
         try:
             resp = await ModelOrchestrator.call_model_with_resilience(
