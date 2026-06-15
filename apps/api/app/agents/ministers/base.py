@@ -190,6 +190,7 @@ Analyze this problem from your ministerial perspective.
         round_number: int = 1,
         phase: str = "debate",
         prior_arguments: Optional[List[Dict[str, Any]]] = None,
+        fact_check_report: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Phase 2/4 — debate argument or rebuttal. Returns DebateArgument dict."""
 
@@ -207,11 +208,16 @@ Analyze this problem from your ministerial perspective.
                 for p in prior_arguments[-6:]
             )
 
+        fact_check_ctx = ""
+        if fact_check_report:
+            fact_check_ctx = f"\n\nFACT CHECK REPORT:\nContradictions detected: {fact_check_report.get('contradictions_detected', [])}\nUnsupported conclusions: {fact_check_report.get('unsupported_conclusions', [])}"
+
         user_msg = f"""PROBLEM: {problem}
 
 MINISTERIAL ANALYSES:
 {analyses_ctx}
 {prior_ctx}
+{fact_check_ctx}
 
 You are in ROUND {round_number} — PHASE: {phase.upper()}.
 {"ATTACK the weakest proposals. Challenge assumptions. Expose contradictions." if phase == "opposition_attack" else ""}

@@ -245,6 +245,7 @@ async def node_debate_round(state: GovernanceState) -> Dict[str, Any]:
             round_number=1,
             phase="debate",
             prior_arguments=arguments,
+            fact_check_report=state.get("fact_check_report"),
         )
         result["_timestamp"] = _ts()
         arguments.append(result)
@@ -275,6 +276,7 @@ async def node_opposition_attack(state: GovernanceState) -> Dict[str, Any]:
         round_number=1,
         phase="opposition_attack",
         prior_arguments=debate_args,
+        fact_check_report=state.get("fact_check_report"),
     )
     result["_timestamp"] = _ts()
 
@@ -310,6 +312,7 @@ async def node_rebuttal_round(state: GovernanceState) -> Dict[str, Any]:
             round_number=2,
             phase="rebuttal",
             prior_arguments=prior_arguments,
+            fact_check_report=state.get("fact_check_report"),
         )
         result["_timestamp"] = _ts()
         return result
@@ -488,6 +491,7 @@ async def node_prime_minister_synthesis(state: GovernanceState) -> Dict[str, Any
     tally     = state.get("vote_tally", {})
     options   = state.get("policy_options", [])
     meta      = state.get("metadata", {})
+    fact_check_report = state.get("fact_check_report", {})
 
     # ── Build synthesis context ────────────────────────────────
     analyses_block = "\n\n".join(
@@ -520,6 +524,10 @@ async def node_prime_minister_synthesis(state: GovernanceState) -> Dict[str, Any
     )
 
     tally_block = " | ".join(f"{k}: {v} votes" for k, v in tally.items())
+    
+    fact_check_block = ""
+    if fact_check_report:
+        fact_check_block = f"\nFACT CHECK REPORT:\nContradictions detected: {fact_check_report.get('contradictions_detected', [])}\nUnsupported conclusions: {fact_check_report.get('unsupported_conclusions', [])}\n"
 
     pm_schema = """{
   "executive_summary": "<2-3 sentence plain-language summary of the final decision>",
@@ -571,7 +579,7 @@ VOTE RESULTS:
 {vote_block}
 TALLY: {tally_block}
 WINNING OPTION: {meta.get('winning_option','?')} ({meta.get('vote_percentage',0)}% — {meta.get('consensus_level','?')} consensus)
-
+{fact_check_block}
 Synthesise all of the above into a final binding policy (the selected strategy). Be specific, realistic, and politically defensible.
 You must generate:
 1. Reasoning (rationale)
