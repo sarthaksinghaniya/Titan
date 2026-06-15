@@ -138,6 +138,7 @@ async def get_project_report(
         votes=[VoteSchema.model_validate(v) for v in project.votes],
         simulations=[SimulationSchema.model_validate(s) for s in project.simulations],
         final_report=FinalReportSchema.model_validate(project.final_report) if project.final_report else None,
+        executive_reports=project.metadata_.get("executive_reports", []) if project.metadata_ else [],
     )
 
 

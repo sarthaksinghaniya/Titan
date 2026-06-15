@@ -4,6 +4,7 @@ import React, { Profiler } from 'react';
 import { motion } from 'framer-motion';
 import { useSessionStore } from '@/store/useSessionStore';
 import { FileText, CheckCircle, ShieldAlert, Zap, Layers, AlertCircle } from 'lucide-react';
+import { EvidenceCitations } from './EvidenceCitations';
 
 const onRenderCallback = (
   id: string,
@@ -219,6 +220,9 @@ export const DecisionReport = React.memo(function DecisionReport() {
             </div>
           </motion.div>
         </div>
+        
+        {/* Full Width Col: Citations */}
+        <EvidenceCitations />
       </div>
     </Profiler>
   );

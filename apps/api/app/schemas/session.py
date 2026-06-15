@@ -163,6 +163,7 @@ class ProjectReportSchema(BaseModel):
     votes: List[VoteSchema]
     simulations: List[SimulationSchema]
     final_report: Optional[FinalReportSchema]
+    executive_reports: Optional[List[Any]] = None
 
 
 # ─── Health Check ─────────────────────────────────────────────

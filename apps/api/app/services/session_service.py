@@ -458,4 +458,12 @@ class SessionService:
             )
             db.add(report)
 
+        # 6. Save Executive Reports to metadata
+        exec_reports = state.get("executive_reports", [])
+        if exec_reports:
+            result = await db.execute(select(Project).where(Project.id == pid))
+            proj = result.scalar_one()
+            proj.metadata_ = {**(proj.metadata_ or {}), "executive_reports": exec_reports}
+            db.add(proj)
+
         await db.commit()
