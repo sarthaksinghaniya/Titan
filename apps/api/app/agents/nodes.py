@@ -51,7 +51,7 @@ from langgraph.types import Send
 
 from app.agents.state import GovernanceState, MinisterOutput, DebateArgument, VoteRecord
 from app.agents.ministers import CABINET, PRIME_MINISTER, MINISTER_REGISTRY, SIMULATION_AGENT, OppositionMinister
-from app.agents.ministers.specialists import FactCheckerAgent, RiskAgent, EconomicForecastAgent, ScenarioPlanningAgent
+from app.agents.ministers.specialists import FactCheckerAgent, RiskAgent
 from app.core.config import settings
 from app.services.event_bus import EventBus
 from app.agents.orchestrator import ModelOrchestrator, ModelTask
@@ -708,7 +708,7 @@ def route_after_validation(state: GovernanceState) -> str | List[Send]:
     """After validation: proceed to research retrieval or fail."""
     if state.get("error") or state.get("current_phase") == "failed":
         return "error_handler"
-    return "research_retrieval"
+    return "research_generation"
 
 
 def route_after_synthesis(state: GovernanceState) -> str:

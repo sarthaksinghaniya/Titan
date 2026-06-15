@@ -139,7 +139,7 @@ def build_graph() -> Any:
     g.add_node("tally_votes",              time_node(node_tally_votes))
     g.add_node("forecasting",              time_node(node_forecasting))
     g.add_node("prime_minister_synthesis", time_node(node_prime_minister_synthesis))
-    g.add_node("recommendations",          time_node(node_recommendations))
+    g.add_node("generate_recommendations",          time_node(node_recommendations))
     g.add_node("black_swan_engine",        time_node(node_black_swan_engine))
     g.add_node("error_handler",            time_node(node_error_handler))
 
@@ -182,8 +182,8 @@ def build_graph() -> Any:
 
     # ── PM synthesis & Recommendations ─────────────────────────
     g.add_edge("forecasting", "prime_minister_synthesis")
-    g.add_edge("prime_minister_synthesis", "recommendations")
-    g.add_edge("recommendations", "black_swan_engine")
+    g.add_edge("prime_minister_synthesis", "generate_recommendations")
+    g.add_edge("generate_recommendations", "black_swan_engine")
 
     # ── Final edge: black_swan_engine → END | error ────────────
     g.add_conditional_edges(
