@@ -59,9 +59,14 @@ export const DecisionReport = React.memo(function DecisionReport() {
             <span className="bg-titan-gold/20 text-titan-gold px-3 py-1 rounded text-xs font-bold tracking-widest uppercase">
               Binding Policy Directive
             </span>
-            <span className="text-titan-text-muted text-sm font-mono">
-              Consensus: <span className="text-white uppercase">{finalReport.consensus_level}</span>
+            <span className="bg-titan-blue-dark/50 text-titan-blue-light px-3 py-1 rounded border border-titan-blue-light/20 text-xs font-mono">
+              Confidence: {finalReport.confidence_score}%
             </span>
+            {finalReport.version && (
+              <span className="bg-white/5 text-titan-text-muted px-3 py-1 rounded border border-white/10 text-xs font-mono">
+                v{finalReport.version}.0
+              </span>
+            )}
           </div>
           
           <h2 className="text-3xl font-black text-white mb-4">

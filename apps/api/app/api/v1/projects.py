@@ -138,6 +138,9 @@ async def get_project_report(
         if project.metadata_:
             fr_dict["alternative_hypotheses"] = project.metadata_.get("alternative_hypotheses")
             fr_dict["requires_human_review"] = project.metadata_.get("requires_human_review", False)
+            fr_dict["version"] = project.metadata_.get("version", 1)
+            fr_dict["parent_project_id"] = project.metadata_.get("parent_project_id")
+            fr_dict["verification_timestamps"] = project.metadata_.get("verification_timestamps")
         final_report_data = FinalReportSchema.model_validate(fr_dict)
 
     return ProjectReportSchema(

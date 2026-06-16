@@ -466,6 +466,16 @@ class SessionService:
                 meta_update["alternative_hypotheses"] = fr["alternative_hypotheses"]
             if "requires_human_review" in fr:
                 meta_update["requires_human_review"] = fr["requires_human_review"]
+                
+            # Lineage, version tracking, and timestamps
+            meta_update["version"] = state.get("metadata", {}).get("version", 1)
+            meta_update["parent_project_id"] = state.get("metadata", {}).get("parent_project_id", None)
+            meta_update["verification_timestamps"] = {
+                "started_at": state.get("metadata", {}).get("started_at"),
+                "fact_check_completed": state.get("fact_check_report", {}).get("_timestamp"),
+                "synthesis_completed": fr.get("_timestamp")
+            }
+            
             if meta_update:
                 proj.metadata_ = {**(proj.metadata_ or {}), **meta_update}
                 db.add(proj)

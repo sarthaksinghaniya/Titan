@@ -152,6 +152,9 @@ class FinalReportSchema(BaseModel):
     alternative_hypotheses: Optional[List[str]] = None
     requires_human_review: Optional[bool] = False
     model_used: str
+    version: Optional[int] = 1
+    parent_project_id: Optional[str] = None
+    verification_timestamps: Optional[Dict[str, str]] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
