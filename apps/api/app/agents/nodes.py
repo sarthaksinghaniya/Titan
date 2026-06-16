@@ -81,7 +81,21 @@ async def node_input_validation(state: GovernanceState) -> Dict[str, Any]:
     if not problem or len(problem) < 20:
         return {"error": "Problem statement too short (minimum 20 characters)", "current_phase": "failed"}
 
-    logger.info("Input validated", project_id=state["project_id"], length=len(problem))
+    logger.info("Input length validated", project_id=state["project_id"], length=len(problem))
+    
+    # Adversarial Defense Scan
+    from app.agents.ministers.specialists import SecurityAgent
+    security_agent = SecurityAgent()
+    sec_report = await security_agent.verify_prompt(problem)
+    
+    if not sec_report.get("is_safe", True):
+        logger.warning("Adversarial prompt injection detected", reason=sec_report.get("violation_reason"))
+        return {
+            "error": f"Adversarial safeguard triggered: {sec_report.get('violation_reason')}",
+            "current_phase": "failed"
+        }
+
+    logger.info("Input security validated", project_id=state["project_id"])
     return {
         "current_phase": "researching",
         "metadata": {
