@@ -163,7 +163,6 @@ class ExecutiveReportingAgent(SpecialistAgent):
   "policy_implications": ["<policy 1>"],
   "legislative_requirements": ["<req 1>"],
   "public_sentiment_risk": "<risk assessment>",
-  "evidence_table": [ {"claim": "<claim>", "evidence_id": "<EV-123>", "source": "<source>", "confidence": 95} ],
   "confidence_score": 90
 }"""
         },
@@ -176,7 +175,6 @@ class ExecutiveReportingAgent(SpecialistAgent):
   "compliance_costs": ["<cost 1>"],
   "competitive_advantages": ["<advantage 1>"],
   "roi_forecast": "<roi assessment>",
-  "evidence_table": [ {"claim": "<claim>", "evidence_id": "<EV-123>", "source": "<source>", "confidence": 95} ],
   "confidence_score": 90
 }"""
         },
@@ -189,7 +187,6 @@ class ExecutiveReportingAgent(SpecialistAgent):
   "startup_opportunities": ["<opp 1>"],
   "capital_allocation_strategy": "<strategy>",
   "yield_forecast": "<forecast>",
-  "evidence_table": [ {"claim": "<claim>", "evidence_id": "<EV-123>", "source": "<source>", "confidence": 95} ],
   "confidence_score": 90
 }"""
         },
@@ -201,13 +198,29 @@ class ExecutiveReportingAgent(SpecialistAgent):
   "research_opportunities": ["<research 1>"],
   "theoretical_shifts": ["<shift 1>"],
   "grant_funding_areas": ["<funding 1>"],
-  "evidence_table": [ {"claim": "<claim>", "evidence_id": "<EV-123>", "source": "<source>", "confidence": 95} ],
   "confidence_score": 90
 }"""
         }
     }
 
-    async def generate_report(self, final_report: Dict[str, Any], evidence_dossier: str, forecasting_results: List[Dict[str, Any]], audience: str) -> Dict[str, Any]:
+    async def extract_global_evidence(self, evidence_dossier: str) -> List[Dict[str, Any]]:
+        """Extracts a SINGLE global evidence table to ensure absolute consistency across all audiences."""
+        sys_prompt = "You are the TITAN Evidence Extraction Engine. Extract all concrete claims from the dossier."
+        schema = """{
+  "evidence_table": [ {"claim": "<claim>", "evidence_id": "<EV-123>", "source": "<source>", "confidence": 95} ]
+}"""
+        user_msg = f"DOSSIER:\n{evidence_dossier}\n\nReturn ONLY JSON:\n{schema}"
+        try:
+            resp = await ModelOrchestrator.call_model_with_resilience(
+                ModelTask.SYNTHESIS,
+                [SystemMessage(content=sys_prompt), HumanMessage(content=user_msg)]
+            )
+            return extract_json(str(resp.content)).get("evidence_table", [])
+        except Exception as e:
+            logger.error("Global evidence extraction failed", error=str(e))
+            return []
+
+    async def generate_report(self, final_report: Dict[str, Any], evidence_dossier: str, forecasting_results: List[Dict[str, Any]], audience: str, global_evidence: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         config = self.AUDIENCE_CONFIGS.get(audience, self.AUDIENCE_CONFIGS["Government"])
         sys_prompt = config["prompt"]
         schema = config["schema"]
@@ -227,6 +240,7 @@ class ExecutiveReportingAgent(SpecialistAgent):
             )
             result = extract_json(str(resp.content))
             result["audience"] = audience
+            result["evidence_table"] = global_evidence or []  # Guarantee identical evidence across audiences
             return result
         except Exception as e:
             logger.error(f"Reporting failed for {audience}", error=str(e))

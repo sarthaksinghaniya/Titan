@@ -656,8 +656,11 @@ async def node_recommendations(state: GovernanceState) -> Dict[str, Any]:
     agent = ExecutiveReportingAgent()
     audiences = ["Government", "Enterprise", "Investors", "Universities"]
     
+    # Extract global evidence ONCE to ensure identical facts across all audience reports
+    global_evidence = await agent.extract_global_evidence(evidence)
+    
     reports = await asyncio.gather(
-        *(agent.generate_report(report, evidence, forecasting, audience) for audience in audiences)
+        *(agent.generate_report(report, evidence, forecasting, audience, global_evidence) for audience in audiences)
     )
 
     logger.info("Executive Reporting complete", reports_generated=len(reports))
