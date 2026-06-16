@@ -39,10 +39,16 @@ class FactCheckerAgent(SpecialistAgent):
   "contradictions_detected": [
     {"minister": "<role>", "contradiction": "<description>"}
   ],
+  "competing_evidence_detected": [
+    {"conflict_description": "<description of competing facts within evidence>", "evidence_id_1": "<EV-123>", "evidence_id_2": "<EV-456>"}
+  ],
+  "alternative_hypotheses": ["<hypothesis 1>", "<hypothesis 2>"],
   "unsupported_conclusions": [
     {"minister": "<role>", "conclusion": "<unsupported claim>"}
   ],
   "overall_confidence_score": 85,
+  "requires_human_review": false,
+  "human_review_reason": "<reason if true>",
   "summary": "<short audit summary>"
 }"""
 
@@ -58,7 +64,8 @@ class FactCheckerAgent(SpecialistAgent):
 
         sys_prompt = """You are the Fact Verification Agent.
 Your mandate is strictly to verify claims made by the ministers against the provided Evidence Dossier.
-Detect contradictions, identify unsupported conclusions, and verify factual accuracy.
+You must also evaluate the Evidence Dossier itself to detect if the underlying evidence supports competing or mutually exclusive conclusions.
+If competing evidence is detected, generate alternative hypotheses and set 'requires_human_review' to true.
 Be clinical, objective, and unforgiving of hallucinations. Do not participate in the debate, only output the verified findings."""
 
         user_msg = f"""PROBLEM: {problem}

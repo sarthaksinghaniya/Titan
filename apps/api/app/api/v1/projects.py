@@ -131,13 +131,22 @@ async def get_project_report(
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
+    final_report_data = None
+    if project.final_report:
+        # We need to serialize the model first to inject the metadata fields
+        fr_dict = FinalReportSchema.model_validate(project.final_report).model_dump()
+        if project.metadata_:
+            fr_dict["alternative_hypotheses"] = project.metadata_.get("alternative_hypotheses")
+            fr_dict["requires_human_review"] = project.metadata_.get("requires_human_review", False)
+        final_report_data = FinalReportSchema.model_validate(fr_dict)
+
     return ProjectReportSchema(
         project=ProjectSchema.model_validate(project),
         agents=[AgentSchema.model_validate(a) for a in project.agents],
         debates=[DebateSchema.model_validate(d) for d in project.debates],
         votes=[VoteSchema.model_validate(v) for v in project.votes],
         simulations=[SimulationSchema.model_validate(s) for s in project.simulations],
-        final_report=FinalReportSchema.model_validate(project.final_report) if project.final_report else None,
+        final_report=final_report_data,
         executive_reports=project.metadata_.get("executive_reports", []) if project.metadata_ else [],
     )
 

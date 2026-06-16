@@ -45,6 +45,16 @@ export const DecisionReport = React.memo(function DecisionReport() {
         </div>
         
         <div className="relative z-10">
+          {finalReport.requires_human_review && (
+            <div className="mb-6 bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-red-400 font-bold text-sm uppercase tracking-wider mb-1">Human Review Required</h4>
+                <p className="text-red-200/80 text-sm">TITAN detected conflicting baseline evidence or irreconcilable logical contradictions that could not be algorithmically resolved. Human oversight is mandated before policy deployment.</p>
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center gap-3 mb-4">
             <span className="bg-titan-gold/20 text-titan-gold px-3 py-1 rounded text-xs font-bold tracking-widest uppercase">
               Binding Policy Directive
@@ -80,6 +90,20 @@ export const DecisionReport = React.memo(function DecisionReport() {
             <p className="text-titan-text-secondary leading-relaxed">
               {finalReport.overall_rationale}
             </p>
+            
+            {finalReport.alternative_hypotheses && finalReport.alternative_hypotheses.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-titan-border">
+                <h4 className="text-sm font-bold text-titan-gold mb-3 uppercase tracking-wider">Alternative Hypotheses Generated</h4>
+                <ul className="space-y-2">
+                  {finalReport.alternative_hypotheses.map((hypothesis: string, idx: number) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-titan-text-secondary">
+                      <span className="text-titan-gold font-mono">{idx + 1}.</span>
+                      <span>{hypothesis}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </motion.div>
 
           <motion.div 

@@ -149,6 +149,8 @@ class FinalReportSchema(BaseModel):
     black_swan_crisis: Optional[str] = None
     black_swan_impact: Optional[str] = None
     resilience_score: Optional[float] = None
+    alternative_hypotheses: Optional[List[str]] = None
+    requires_human_review: Optional[bool] = False
     model_used: str
     created_at: datetime
 

@@ -457,6 +457,18 @@ class SessionService:
                 model_used="gemini-1.5-pro",
             )
             db.add(report)
+            
+            # Save contradiction fields to metadata to avoid schema migration
+            result = await db.execute(select(Project).where(Project.id == pid))
+            proj = result.scalar_one()
+            meta_update = {}
+            if "alternative_hypotheses" in fr:
+                meta_update["alternative_hypotheses"] = fr["alternative_hypotheses"]
+            if "requires_human_review" in fr:
+                meta_update["requires_human_review"] = fr["requires_human_review"]
+            if meta_update:
+                proj.metadata_ = {**(proj.metadata_ or {}), **meta_update}
+                db.add(proj)
 
         # 6. Save Executive Reports to metadata
         exec_reports = state.get("executive_reports", [])
