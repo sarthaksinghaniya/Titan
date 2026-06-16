@@ -93,9 +93,12 @@ Return ONLY a valid JSON object — no markdown, no explanation before or after:
   "primary_goal": "<single sentence: what you are trying to achieve>",
   "key_findings": ["<finding 1>", "<finding 2>", "<finding 3>"],
   "proposed_solutions": [
-    "<solution 1 with brief rationale>",
-    "<solution 2 with brief rationale>",
-    "<solution 3 with brief rationale>"
+    {
+      "evidence_ids": ["<EV-123>"],
+      "analysis": "<logical derivation from evidence>",
+      "conclusion": "<strategic conclusion drawn>",
+      "recommendation": "<actionable recommendation>"
+    }
   ],
   "constraints_applied": ["<constraint 1>", "<constraint 2>"],
   "red_lines": ["<condition you will never accept 1>", "<condition 2>"],

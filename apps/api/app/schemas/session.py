@@ -67,7 +67,7 @@ class AgentSchema(BaseModel):
     model_used: str
     analysis: str
     key_points: List[str]
-    proposed_solutions: List[str]
+    proposed_solutions: List[Any]
     concerns: List[str]
     tokens_used: Optional[int]
     processing_ms: Optional[int]

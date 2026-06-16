@@ -543,7 +543,14 @@ async def node_prime_minister_synthesis(state: GovernanceState) -> Dict[str, Any
     {
       "phase": "Phase 1 — Foundation",
       "duration": "Months 1-6",
-      "actions": ["Action 1", "Action 2", "Action 3"],
+      "actions": [
+        {
+          "evidence_ids": ["<EV-123>"],
+          "analysis": "<analysis supporting this action>",
+          "conclusion": "<strategic conclusion drawn>",
+          "recommendation": "<Action 1>"
+        }
+      ],
       "responsible_ministry": "Ministry Name",
       "budget_allocation_percent": 30,
       "kpis": ["KPI 1", "KPI 2"]
