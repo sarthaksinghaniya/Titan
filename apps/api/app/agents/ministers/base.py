@@ -100,7 +100,7 @@ Return ONLY a valid JSON object — no markdown, no explanation before or after:
   "constraints_applied": ["<constraint 1>", "<constraint 2>"],
   "red_lines": ["<condition you will never accept 1>", "<condition 2>"],
   "evidence_score": <0-100 integer>,
-  "cited_sources": ["<source 1>", "<source 2>"],
+  "cited_evidence_ids": ["<EV-123>", "<EV-456>"],
   "assumptions_challenged": ["<assumption 1>", "<assumption 2>"],
   "priority_score": <0-100 integer>
 }"""
@@ -117,7 +117,7 @@ Return ONLY a valid JSON object:
   "concessions": ["<points you accept from others>"],
   "new_evidence": ["<new data or reasoning you introduce>"],
   "contradictions_detected": ["<contradiction 1>", "<contradiction 2>"],
-  "cited_sources": ["<source 1>", "<source 2>"],
+  "cited_evidence_ids": ["<EV-123>", "<EV-456>"],
   "word_count": <integer>
 }"""
 
@@ -179,7 +179,7 @@ Analyze this problem from your ministerial perspective.
             # Deterministic Confidence Calculation
             findings_score = min(len(result.get("key_findings", [])), 3) / 3.0 * 35.0
             solutions_score = min(len(result.get("proposed_solutions", [])), 2) / 2.0 * 35.0
-            sources_score = min(len(result.get("cited_sources", [])), 2) / 2.0 * 30.0
+            sources_score = min(len(result.get("cited_evidence_ids", [])), 2) / 2.0 * 30.0
             result["confidence"] = round(findings_score + solutions_score + sources_score)
             
             return result
@@ -249,7 +249,7 @@ You are in ROUND {round_number} — PHASE: {phase.upper()}.
             # Deterministic Confidence Calculation
             length_score = min(word_count, 150) / 150.0 * 40.0
             evidence_score = min(len(result.get("new_evidence", [])), 2) / 2.0 * 30.0
-            sources_score = min(len(result.get("cited_sources", [])), 2) / 2.0 * 30.0
+            sources_score = min(len(result.get("cited_evidence_ids", [])), 2) / 2.0 * 30.0
             
             penalty = 0
             if fact_check_report:

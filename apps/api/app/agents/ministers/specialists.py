@@ -34,7 +34,7 @@ class FactCheckerAgent(SpecialistAgent):
   "agent_role": "fact_checker_agent",
   "phase": "fact_check",
   "verified_claims": [
-    {"claim": "<claim from minister>", "status": "verified|refuted", "evidence_citation": "<source>"}
+    {"claim": "<claim from minister>", "status": "verified|refuted", "evidence_id": "<EV-123>", "evidence_source": "<source>"}
   ],
   "contradictions_detected": [
     {"minister": "<role>", "contradiction": "<description>"}
@@ -163,7 +163,7 @@ class ExecutiveReportingAgent(SpecialistAgent):
   "policy_implications": ["<policy 1>"],
   "legislative_requirements": ["<req 1>"],
   "public_sentiment_risk": "<risk assessment>",
-  "evidence_table": [ {"claim": "<claim>", "source": "<source>", "confidence": 95} ],
+  "evidence_table": [ {"claim": "<claim>", "evidence_id": "<EV-123>", "source": "<source>", "confidence": 95} ],
   "confidence_score": 90
 }"""
         },
@@ -176,7 +176,7 @@ class ExecutiveReportingAgent(SpecialistAgent):
   "compliance_costs": ["<cost 1>"],
   "competitive_advantages": ["<advantage 1>"],
   "roi_forecast": "<roi assessment>",
-  "evidence_table": [ {"claim": "<claim>", "source": "<source>", "confidence": 95} ],
+  "evidence_table": [ {"claim": "<claim>", "evidence_id": "<EV-123>", "source": "<source>", "confidence": 95} ],
   "confidence_score": 90
 }"""
         },
@@ -189,7 +189,7 @@ class ExecutiveReportingAgent(SpecialistAgent):
   "startup_opportunities": ["<opp 1>"],
   "capital_allocation_strategy": "<strategy>",
   "yield_forecast": "<forecast>",
-  "evidence_table": [ {"claim": "<claim>", "source": "<source>", "confidence": 95} ],
+  "evidence_table": [ {"claim": "<claim>", "evidence_id": "<EV-123>", "source": "<source>", "confidence": 95} ],
   "confidence_score": 90
 }"""
         },
@@ -201,7 +201,7 @@ class ExecutiveReportingAgent(SpecialistAgent):
   "research_opportunities": ["<research 1>"],
   "theoretical_shifts": ["<shift 1>"],
   "grant_funding_areas": ["<funding 1>"],
-  "evidence_table": [ {"claim": "<claim>", "source": "<source>", "confidence": 95} ],
+  "evidence_table": [ {"claim": "<claim>", "evidence_id": "<EV-123>", "source": "<source>", "confidence": 95} ],
   "confidence_score": 90
 }"""
         }

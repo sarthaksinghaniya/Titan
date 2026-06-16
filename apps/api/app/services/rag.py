@@ -1,4 +1,5 @@
 import json
+import uuid
 from typing import Any, Dict, List
 import structlog
 
@@ -38,6 +39,7 @@ class RAGPipeline:
                 docs_to_insert.append(Document(
                     page_content=chunk,
                     metadata={
+                        "evidence_id": f"EV-{uuid.uuid4().hex[:6].upper()}",
                         "source": ev.get("source", "Unknown"),
                         "title": ev.get("title", "Unknown"),
                         "url": ev.get("url", ""),
@@ -84,7 +86,7 @@ class RAGPipeline:
         chunks_text = ""
         for i, chunk in enumerate(retrieved_chunks):
             meta = chunk.get("metadata", {})
-            chunks_text += f"[{i}]\nSOURCE: {meta.get('source')} | {meta.get('title')}\nCONTENT: {chunk.get('content')}\n\n"
+            chunks_text += f"[{i}]\nEVIDENCE_ID: {meta.get('evidence_id', 'EV-???')} | SOURCE: {meta.get('source')} | {meta.get('title')}\nCONTENT: {chunk.get('content')}\n\n"
 
         schema = """{
   "scored_chunks": [

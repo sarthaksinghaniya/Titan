@@ -530,9 +530,10 @@ async def node_prime_minister_synthesis(state: GovernanceState) -> Dict[str, Any
         fact_check_block = f"\nFACT CHECK REPORT:\nContradictions detected: {fact_check_report.get('contradictions_detected', [])}\nUnsupported conclusions: {fact_check_report.get('unsupported_conclusions', [])}\n"
 
     pm_schema = """{
-  "executive_summary": "<2-3 sentence plain-language summary of the final decision>",
+  "executive_summary": "<max 200 words summarizing the final binding policy>",
   "chosen_option": "<exact option name>",
-  "rationale": "<your detailed reasoning for selecting this strategy, citing debate and simulation results>",
+  "rationale": "<your detailed reasoning for selecting this strategy>",
+  "cited_evidence_ids": ["<EV-123>", "<EV-456>"],
   "implementation_steps": [
     {
       "phase": "Phase 1 — Foundation",

@@ -187,7 +187,7 @@ async def node_context_compression(state: GovernanceState) -> Dict[str, Any]:
         }
 
     evidence_text = "\n".join(
-        f"- [{item.get('metadata', {}).get('source', 'System')}]: {item.get('metadata', {}).get('title', 'Precedent')} (Confidence: {item.get('composite_confidence', 50.0):.1f})\n  {item.get('content', '')}"
+        f"- [{item.get('metadata', {}).get('evidence_id', 'EV-???')}] {item.get('metadata', {}).get('source', 'System')}: {item.get('metadata', {}).get('title', 'Precedent')} (Confidence: {item.get('composite_confidence', 50.0):.1f})\n  {item.get('content', '')}"
         for item in precedents
     )
 

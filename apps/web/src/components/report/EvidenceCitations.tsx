@@ -39,7 +39,8 @@ export const EvidenceCitations = () => {
         <table className="w-full text-left text-sm text-titan-text-secondary">
           <thead className="text-xs text-titan-text-muted uppercase bg-black/40 border-b border-titan-border">
             <tr>
-              <th className="px-4 py-3 rounded-tl-lg">Verified Claim</th>
+              <th className="px-4 py-3 rounded-tl-lg">ID</th>
+              <th className="px-4 py-3">Verified Claim</th>
               <th className="px-4 py-3">Source Material</th>
               <th className="px-4 py-3 text-right rounded-tr-lg">Confidence</th>
             </tr>
@@ -47,6 +48,9 @@ export const EvidenceCitations = () => {
           <tbody className="divide-y divide-titan-border">
             {uniqueCitations.map((citation: any, idx: number) => (
               <tr key={idx} className="hover:bg-white/5 transition-colors">
+                <td className="px-4 py-4 font-mono text-titan-blue-light text-xs whitespace-nowrap">
+                  {citation.evidence_id || 'EV-GEN'}
+                </td>
                 <td className="px-4 py-4 font-medium text-white max-w-md">
                   {citation.claim}
                 </td>
