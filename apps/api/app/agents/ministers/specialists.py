@@ -128,15 +128,19 @@ class ForecastingAgent(SpecialistAgent):
   "social_score": 50,
   "risk_level": "low|medium|high|critical",
   "key_risks": ["<risk 1>"],
-  "key_benefits": ["<benefit 1>"]
+  "key_benefits": ["<benefit 1>"],
+  "assumptions": ["<explicit assumption 1>", "<explicit assumption 2>"],
+  "cited_evidence_ids": ["<EV-123>", "<EV-456>"],
+  "forecast_confidence": 85
 }"""
 
-    async def forecast_scenario(self, option: str, scenario: str) -> Dict[str, Any]:
+    async def forecast_scenario(self, option: str, scenario: str, evidence_dossier: str) -> Dict[str, Any]:
         sys_prompt = f"""You are the TITAN Forecasting Engine. 
 Evaluate the following policy option under the '{scenario}' scenario.
 Score the predicted impact (0-100) across 5 domains: Economic, Infrastructure, Technology, Environmental, and Social.
-Be highly analytical and realistic."""
-        user_msg = f"POLICY OPTION: {option}\n\nReturn ONLY JSON:\n{self.SCHEMA}"
+You MUST base your forecast explicitly on the provided Evidence Dossier.
+Do not speculate without citing specific evidence IDs. Be highly analytical and realistic."""
+        user_msg = f"POLICY OPTION: {option}\n\nEVIDENCE DOSSIER:\n{evidence_dossier}\n\nReturn ONLY JSON:\n{self.SCHEMA}"
         
         try:
             resp = await ModelOrchestrator.call_model_with_resilience(
@@ -174,7 +178,12 @@ class ExecutiveReportingAgent(SpecialistAgent):
   "market_impact": ["<impact 1>"],
   "compliance_costs": ["<cost 1>"],
   "competitive_advantages": ["<advantage 1>"],
-  "roi_forecast": "<roi assessment>",
+  "roi_forecast": {
+    "projection": "<roi assessment>",
+    "assumptions": ["<assumption 1>"],
+    "cited_evidence_ids": ["<EV-123>"],
+    "forecast_confidence": 85
+  },
   "confidence_score": 90
 }"""
         },
@@ -186,7 +195,12 @@ class ExecutiveReportingAgent(SpecialistAgent):
   "market_risks": ["<risk 1>"],
   "startup_opportunities": ["<opp 1>"],
   "capital_allocation_strategy": "<strategy>",
-  "yield_forecast": "<forecast>",
+  "yield_forecast": {
+    "projection": "<yield forecast>",
+    "assumptions": ["<assumption 1>"],
+    "cited_evidence_ids": ["<EV-123>"],
+    "forecast_confidence": 85
+  },
   "confidence_score": 90
 }"""
         },

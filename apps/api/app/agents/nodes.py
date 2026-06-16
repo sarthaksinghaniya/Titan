@@ -438,9 +438,10 @@ async def node_forecasting(state: GovernanceState) -> Dict[str, Any]:
 
     scenarios = ["Best Case", "Expected Case", "Worst Case"]
     forecasting_agent = ForecastingAgent()
+    evidence_dossier = state.get("evidence_dossier", "")
 
     async def run_sim(scenario_name: str):
-        result = await forecasting_agent.forecast_scenario(winning_option, scenario_name)
+        result = await forecasting_agent.forecast_scenario(winning_option, scenario_name, evidence_dossier)
         result["future_name"] = scenario_name
         result["option_name"] = winning_option
         
