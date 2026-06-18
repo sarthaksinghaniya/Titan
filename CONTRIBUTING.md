@@ -615,7 +615,6 @@ Closes #123
 
 We want ministers covering:
 - Healthcare & Medical Innovation
-- Healthcare & Medical Innovation
 - Labor & Workforce Development
 - Justice & Legal Reform
 - Digital Privacy & Security
@@ -651,4 +650,4 @@ We want ministers covering:
 
 **Happy contributing! 🚀**
 
-**Last Updated:** 2026-06-13
+**Last Updated:** 2026-06-18
